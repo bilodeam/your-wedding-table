@@ -13,6 +13,7 @@ export interface Table {
   capacity: number;
   shape: 'round' | 'rectangular';
   position: { x: number; y: number };
+  seatOrder: string[]; // guestId or guestId:plus
 }
 
 export interface WeddingData {

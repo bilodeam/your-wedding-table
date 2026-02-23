@@ -11,7 +11,7 @@ const Index = () => {
   const {
     guests, tables,
     addGuest, addGuestsBulk, removeGuest, updateGuest,
-    assignGuestToTable, addTable, removeTable,
+    assignGuestToTable, addTable, removeTable, swapSeats,
     getTableGuests, getSeatsUsed, updateTablePosition,
     unassignedGuests, confirmedGuests,
     totalHeadcount, fullTables,
@@ -110,6 +110,7 @@ const Index = () => {
                         onDropGuest={assignGuestToTable}
                         onUnassignGuest={(guestId) => assignGuestToTable(guestId, null)}
                         onRemoveTable={removeTable}
+                        onSwapSeats={swapSeats}
                         onPositionChange={updateTablePosition}
                         containerRef={roomRef}
                       />

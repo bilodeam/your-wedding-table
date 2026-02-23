@@ -56,7 +56,6 @@ export function useWeddingData() {
         const table = tables.find(t => t.id === tableId);
         if (!table) return prev;
         const currentCount = prev.filter(g => g.tableId === tableId).length;
-        // Count plus-ones for capacity
         const plusOnes = prev.filter(g => g.tableId === tableId && g.plusOne).length;
         const guestPlusOne = guest.plusOne && guest.tableId !== tableId ? 1 : 0;
         const seatsNeeded = 1 + guestPlusOne;
@@ -66,14 +65,43 @@ export function useWeddingData() {
 
       return prev.map(g => g.id === guestId ? { ...g, tableId } : g);
     });
-  }, [tables]);
+
+    // Update seatOrder
+    if (tableId !== null) {
+      setTables(prev => prev.map(t => {
+        if (t.id !== tableId) return t;
+        const guest = guests.find(g => g.id === guestId);
+        if (!guest) return t;
+        const newOrder = t.seatOrder.filter(s => s !== guestId && s !== `${guestId}:plus`);
+        newOrder.push(guestId);
+        if (guest.plusOne) newOrder.push(`${guestId}:plus`);
+        return { ...t, seatOrder: newOrder };
+      }));
+    } else {
+      // Remove from old table's seatOrder
+      setTables(prev => prev.map(t => ({
+        ...t,
+        seatOrder: t.seatOrder.filter(s => s !== guestId && s !== `${guestId}:plus`),
+      })));
+    }
+  }, [tables, guests]);
 
   const addTable = useCallback((name: string, capacity: number, shape: 'round' | 'rectangular' = 'round') => {
     setTables(prev => {
       const col = prev.length % 3;
       const row = Math.floor(prev.length / 3);
-      return [...prev, { id: generateId(), name, capacity, shape, position: { x: col * 280 + 20, y: row * 280 + 20 } }];
+      return [...prev, { id: generateId(), name, capacity, shape, position: { x: col * 280 + 20, y: row * 280 + 20 }, seatOrder: [] }];
     });
+  }, []);
+
+  const swapSeats = useCallback((tableId: string, fromIndex: number, toIndex: number) => {
+    setTables(prev => prev.map(t => {
+      if (t.id !== tableId) return t;
+      const order = [...t.seatOrder];
+      if (fromIndex < 0 || toIndex < 0 || fromIndex >= order.length || toIndex >= order.length) return t;
+      [order[fromIndex], order[toIndex]] = [order[toIndex], order[fromIndex]];
+      return { ...t, seatOrder: order };
+    }));
   }, []);
 
   const updateTablePosition = useCallback((id: string, position: { x: number; y: number }) => {
@@ -102,7 +130,7 @@ export function useWeddingData() {
   return {
     guests, tables,
     addGuest, addGuestsBulk, removeGuest, updateGuest,
-    assignGuestToTable, addTable, removeTable,
+    assignGuestToTable, addTable, removeTable, swapSeats,
     getTableGuests, getSeatsUsed, updateTablePosition,
     unassignedGuests, confirmedGuests,
     totalHeadcount, fullTables,

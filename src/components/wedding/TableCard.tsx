@@ -9,6 +9,7 @@ interface TableCardProps {
   onUnassignGuest: (guestId: string) => void;
   onRemoveTable: (tableId: string) => void;
   onPositionChange: (tableId: string, position: { x: number; y: number }) => void;
+  onSwapSeats: (tableId: string, fromIndex: number, toIndex: number) => void;
   containerRef: React.RefObject<HTMLDivElement>;
 }
 
@@ -22,7 +23,7 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGuest, onRemoveTable, onPositionChange, containerRef }: TableCardProps) {
+export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGuest, onRemoveTable, onPositionChange, onSwapSeats, containerRef }: TableCardProps) {
   const fillRatio = seatsUsed / table.capacity;
   const statusColor = fillRatio >= 1
     ? 'border-success/60 bg-success/5'
@@ -37,10 +38,12 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
       : 'bg-neutral';
 
   const [isDraggingTable, setIsDraggingTable] = useState(false);
+  const [draggingSeatIndex, setDraggingSeatIndex] = useState<number | null>(null);
+  const [hoverSeatIndex, setHoverSeatIndex] = useState<number | null>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('button, input')) return;
+    if ((e.target as HTMLElement).closest('button, input, [data-seat]')) return;
     e.preventDefault();
     setIsDraggingTable(true);
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -80,16 +83,23 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
     if (guestId) onDropGuest(guestId, table.id);
   };
 
-  // Build seat data: assigned guests first, then empty seats
-  const seatData: { initials: string; filled: boolean; plusOneName?: string }[] = [];
-  guests.forEach(g => {
-    seatData.push({ initials: getInitials(g.name), filled: true });
-    if (g.plusOne) {
-      seatData.push({ initials: getInitials(g.plusOne), filled: true, plusOneName: g.plusOne });
-    }
+  // Build seat data from seatOrder
+  const guestMap = new Map(guests.map(g => [g.id, g]));
+  const seatData: { key: string; initials: string; filled: boolean; label: string; orderIndex: number }[] = [];
+
+  table.seatOrder.forEach((entry, i) => {
+    const isPlus = entry.endsWith(':plus');
+    const guestId = isPlus ? entry.replace(':plus', '') : entry;
+    const guest = guestMap.get(guestId);
+    if (!guest) return;
+    const name = isPlus ? guest.plusOne : guest.name;
+    if (!name) return;
+    seatData.push({ key: entry, initials: getInitials(name), filled: true, label: name, orderIndex: i });
   });
+
+  // Fill empty seats
   while (seatData.length < table.capacity) {
-    seatData.push({ initials: '', filled: false });
+    seatData.push({ key: `empty-${seatData.length}`, initials: '', filled: false, label: 'Empty seat', orderIndex: -1 });
   }
 
   const isRound = table.shape === 'round';
@@ -132,16 +142,39 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
             const rad = (angle * Math.PI) / 180;
             const cx = 70 + 55 * Math.cos(rad);
             const cy = 70 + 55 * Math.sin(rad);
+            const isDragSource = draggingSeatIndex === i;
+            const isDropTarget = hoverSeatIndex === i && draggingSeatIndex !== null && draggingSeatIndex !== i;
             return (
               <div
-                key={i}
-                className={`absolute w-7 h-7 rounded-full border flex items-center justify-center text-[9px] font-body font-medium transition-colors ${
+                key={seat.key}
+                data-seat
+                draggable={seat.filled}
+                onDragStart={(e) => {
+                  if (!seat.filled) return;
+                  e.stopPropagation();
+                  setDraggingSeatIndex(i);
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setHoverSeatIndex(i); }}
+                onDragLeave={() => setHoverSeatIndex(null)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (draggingSeatIndex !== null && seat.filled && seat.orderIndex >= 0) {
+                    const fromOrder = seatData[draggingSeatIndex]?.orderIndex;
+                    if (fromOrder !== undefined && fromOrder >= 0) onSwapSeats(table.id, fromOrder, seat.orderIndex);
+                  }
+                  setDraggingSeatIndex(null);
+                  setHoverSeatIndex(null);
+                }}
+                onDragEnd={() => { setDraggingSeatIndex(null); setHoverSeatIndex(null); }}
+                className={`absolute w-7 h-7 rounded-full border flex items-center justify-center text-[9px] font-body font-medium transition-all ${
                   seat.filled
-                    ? 'bg-primary/30 border-primary/50 text-primary'
+                    ? 'bg-primary/30 border-primary/50 text-primary cursor-grab active:cursor-grabbing'
                     : 'bg-secondary border-border text-muted-foreground'
-                }`}
+                } ${isDragSource ? 'opacity-40 scale-90' : ''} ${isDropTarget ? 'ring-2 ring-primary scale-110' : ''}`}
                 style={{ left: cx - 14, top: cy - 14 }}
-                title={seat.filled ? seat.initials : 'Empty seat'}
+                title={seat.label}
               >
                 {seat.filled ? seat.initials : ''}
               </div>
@@ -150,22 +183,46 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
         </div>
       ) : (
         <div className="mb-3">
-          {/* Rectangular table */}
           <div className="border-2 border-border bg-secondary/30 rounded-md px-2 py-3 min-h-[60px]">
             <div className="flex flex-wrap gap-1.5 justify-center">
-              {seatData.map((seat, i) => (
-                <div
-                  key={i}
-                  className={`w-7 h-7 rounded border flex items-center justify-center text-[9px] font-body font-medium transition-colors ${
-                    seat.filled
-                      ? 'bg-primary/30 border-primary/50 text-primary'
-                      : 'bg-secondary border-border text-muted-foreground'
-                  }`}
-                  title={seat.filled ? seat.initials : 'Empty seat'}
-                >
-                  {seat.filled ? seat.initials : ''}
-                </div>
-              ))}
+              {seatData.map((seat, i) => {
+                const isDragSource = draggingSeatIndex === i;
+                const isDropTarget = hoverSeatIndex === i && draggingSeatIndex !== null && draggingSeatIndex !== i;
+                return (
+                  <div
+                    key={seat.key}
+                    data-seat
+                    draggable={seat.filled}
+                    onDragStart={(e) => {
+                      if (!seat.filled) return;
+                      e.stopPropagation();
+                      setDraggingSeatIndex(i);
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setHoverSeatIndex(i); }}
+                    onDragLeave={() => setHoverSeatIndex(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (draggingSeatIndex !== null && seat.filled && seat.orderIndex >= 0) {
+                        const fromOrder = seatData[draggingSeatIndex]?.orderIndex;
+                        if (fromOrder !== undefined && fromOrder >= 0) onSwapSeats(table.id, fromOrder, seat.orderIndex);
+                      }
+                      setDraggingSeatIndex(null);
+                      setHoverSeatIndex(null);
+                    }}
+                    onDragEnd={() => { setDraggingSeatIndex(null); setHoverSeatIndex(null); }}
+                    className={`w-7 h-7 rounded border flex items-center justify-center text-[9px] font-body font-medium transition-all ${
+                      seat.filled
+                        ? 'bg-primary/30 border-primary/50 text-primary cursor-grab active:cursor-grabbing'
+                        : 'bg-secondary border-border text-muted-foreground'
+                    } ${isDragSource ? 'opacity-40 scale-90' : ''} ${isDropTarget ? 'ring-2 ring-primary scale-110' : ''}`}
+                    title={seat.label}
+                  >
+                    {seat.filled ? seat.initials : ''}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
