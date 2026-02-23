@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useWeddingData } from '@/hooks/useWeddingData';
 import { SummaryBar } from '@/components/wedding/SummaryBar';
 import { GuestForm } from '@/components/wedding/GuestForm';
@@ -11,12 +11,17 @@ const Index = () => {
     guests, tables,
     addGuest, removeGuest, updateGuest,
     assignGuestToTable, addTable, removeTable,
-    getTableGuests, getSeatsUsed,
+    getTableGuests, getSeatsUsed, updateTablePosition,
     unassignedGuests, confirmedGuests,
     totalHeadcount, fullTables,
   } = useWeddingData();
 
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const roomRef = useRef<HTMLDivElement>(null);
+
+  // Calculate room size based on table positions
+  const roomWidth = Math.max(800, ...tables.map(t => t.position.x + 280));
+  const roomHeight = Math.max(400, ...tables.map(t => t.position.y + 300));
 
   return (
     <div className="min-h-screen bg-background">
@@ -70,7 +75,7 @@ const Index = () => {
                 Room Layout
               </h2>
               <p className="text-xs text-muted-foreground font-body mt-1">
-                Drag guests from the list onto tables
+                Drag guests onto tables · Drag tables to rearrange the room
               </p>
             </div>
 
@@ -82,18 +87,31 @@ const Index = () => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {tables.map(table => (
-                  <TableCard
-                    key={table.id}
-                    table={table}
-                    guests={getTableGuests(table.id)}
-                    seatsUsed={getSeatsUsed(table.id)}
-                    onDropGuest={assignGuestToTable}
-                    onUnassignGuest={(guestId) => assignGuestToTable(guestId, null)}
-                    onRemoveTable={removeTable}
-                  />
-                ))}
+              <div
+                ref={roomRef}
+                className="relative bg-card/30 border border-border rounded-lg overflow-auto"
+                style={{ minHeight: roomHeight, minWidth: 0 }}
+              >
+                <div className="relative" style={{ width: roomWidth, height: roomHeight }}>
+                  {tables.map(table => (
+                    <div
+                      key={table.id}
+                      className="absolute"
+                      style={{ left: table.position.x, top: table.position.y }}
+                    >
+                      <TableCard
+                        table={table}
+                        guests={getTableGuests(table.id)}
+                        seatsUsed={getSeatsUsed(table.id)}
+                        onDropGuest={assignGuestToTable}
+                        onUnassignGuest={(guestId) => assignGuestToTable(guestId, null)}
+                        onRemoveTable={removeTable}
+                        onPositionChange={updateTablePosition}
+                        containerRef={roomRef}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

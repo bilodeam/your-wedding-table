@@ -1,4 +1,5 @@
 import { Guest, Table } from '@/types/wedding';
+import { useRef, useState } from 'react';
 
 interface TableCardProps {
   table: Table;
@@ -7,9 +8,21 @@ interface TableCardProps {
   onDropGuest: (guestId: string, tableId: string) => void;
   onUnassignGuest: (guestId: string) => void;
   onRemoveTable: (tableId: string) => void;
+  onPositionChange: (tableId: string, position: { x: number; y: number }) => void;
+  containerRef: React.RefObject<HTMLDivElement>;
 }
 
-export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGuest, onRemoveTable }: TableCardProps) {
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(w => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
+export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGuest, onRemoveTable, onPositionChange, containerRef }: TableCardProps) {
   const fillRatio = seatsUsed / table.capacity;
   const statusColor = fillRatio >= 1
     ? 'border-success/60 bg-success/5'
@@ -22,6 +35,34 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
     : fillRatio >= 0.7
       ? 'bg-warning'
       : 'bg-neutral';
+
+  const [isDraggingTable, setIsDraggingTable] = useState(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button, input')) return;
+    e.preventDefault();
+    setIsDraggingTable(true);
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!containerRef.current) return;
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const x = ev.clientX - containerRect.left - dragOffset.current.x + containerRef.current.scrollLeft;
+      const y = ev.clientY - containerRect.top - dragOffset.current.y + containerRef.current.scrollTop;
+      onPositionChange(table.id, { x: Math.max(0, x), y: Math.max(0, y) });
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingTable(false);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -39,12 +80,28 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
     if (guestId) onDropGuest(guestId, table.id);
   };
 
+  // Build seat data: assigned guests first, then empty seats
+  const seatData: { initials: string; filled: boolean; plusOneName?: string }[] = [];
+  guests.forEach(g => {
+    seatData.push({ initials: getInitials(g.name), filled: true });
+    if (g.plusOne) {
+      seatData.push({ initials: getInitials(g.plusOne), filled: true, plusOneName: g.plusOne });
+    }
+  });
+  while (seatData.length < table.capacity) {
+    seatData.push({ initials: '', filled: false });
+  }
+
+  const isRound = table.shape === 'round';
+
   return (
     <div
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`rounded-lg border-2 p-4 transition-all animate-scale-in ${statusColor}`}
+      onMouseDown={handleMouseDown}
+      className={`rounded-lg border-2 p-4 transition-all animate-scale-in w-[240px] select-none ${statusColor} ${isDraggingTable ? 'shadow-lg shadow-primary/20 z-20' : ''}`}
+      style={{ cursor: isDraggingTable ? 'grabbing' : 'grab' }}
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -52,8 +109,8 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
           <h4 className="font-display text-base font-semibold text-foreground">{table.name}</h4>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-body text-muted-foreground">
-            {seatsUsed}/{table.capacity} seats
+          <span className="text-[10px] font-body text-muted-foreground">
+            {isRound ? '○' : '▭'} {seatsUsed}/{table.capacity}
           </span>
           <button
             onClick={() => onRemoveTable(table.id)}
@@ -66,22 +123,55 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
       </div>
 
       {/* Seat visualization */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
-        {Array.from({ length: table.capacity }).map((_, i) => (
-          <div
-            key={i}
-            className={`w-6 h-6 rounded-full border transition-colors flex items-center justify-center text-[9px] font-body ${
-              i < seatsUsed
-                ? 'bg-primary/30 border-primary/50 text-primary'
-                : 'bg-secondary border-border text-muted-foreground'
-            }`}
-          >
-            {i < seatsUsed ? '●' : '○'}
+      {isRound ? (
+        <div className="relative w-[140px] h-[140px] mx-auto mb-3">
+          {/* Table circle */}
+          <div className="absolute inset-[25px] rounded-full border-2 border-border bg-secondary/30" />
+          {seatData.map((seat, i) => {
+            const angle = (i / table.capacity) * 360 - 90;
+            const rad = (angle * Math.PI) / 180;
+            const cx = 70 + 55 * Math.cos(rad);
+            const cy = 70 + 55 * Math.sin(rad);
+            return (
+              <div
+                key={i}
+                className={`absolute w-7 h-7 rounded-full border flex items-center justify-center text-[9px] font-body font-medium transition-colors ${
+                  seat.filled
+                    ? 'bg-primary/30 border-primary/50 text-primary'
+                    : 'bg-secondary border-border text-muted-foreground'
+                }`}
+                style={{ left: cx - 14, top: cy - 14 }}
+                title={seat.filled ? seat.initials : 'Empty seat'}
+              >
+                {seat.filled ? seat.initials : ''}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="mb-3">
+          {/* Rectangular table */}
+          <div className="border-2 border-border bg-secondary/30 rounded-md px-2 py-3 min-h-[60px]">
+            <div className="flex flex-wrap gap-1.5 justify-center">
+              {seatData.map((seat, i) => (
+                <div
+                  key={i}
+                  className={`w-7 h-7 rounded border flex items-center justify-center text-[9px] font-body font-medium transition-colors ${
+                    seat.filled
+                      ? 'bg-primary/30 border-primary/50 text-primary'
+                      : 'bg-secondary border-border text-muted-foreground'
+                  }`}
+                  title={seat.filled ? seat.initials : 'Empty seat'}
+                >
+                  {seat.filled ? seat.initials : ''}
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
-      {/* Assigned guests */}
+      {/* Assigned guests list */}
       {guests.length > 0 ? (
         <div className="space-y-1.5">
           {guests.map(guest => (
