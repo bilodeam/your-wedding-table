@@ -35,6 +35,10 @@ export function useWeddingData() {
     setGuests(prev => [...prev, { ...guest, id: generateId(), tableId: null }]);
   }, []);
 
+  const addGuestsBulk = useCallback((newGuests: Omit<Guest, 'id' | 'tableId'>[]) => {
+    setGuests(prev => [...prev, ...newGuests.map(g => ({ ...g, id: generateId(), tableId: null }))]);
+  }, []);
+
   const removeGuest = useCallback((id: string) => {
     setGuests(prev => prev.filter(g => g.id !== id));
   }, []);
@@ -97,7 +101,7 @@ export function useWeddingData() {
 
   return {
     guests, tables,
-    addGuest, removeGuest, updateGuest,
+    addGuest, addGuestsBulk, removeGuest, updateGuest,
     assignGuestToTable, addTable, removeTable,
     getTableGuests, getSeatsUsed, updateTablePosition,
     unassignedGuests, confirmedGuests,
