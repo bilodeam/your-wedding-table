@@ -1,17 +1,18 @@
 import { useState } from 'react';
 
 interface TableFormProps {
-  onAdd: (name: string, capacity: number) => void;
+  onAdd: (name: string, capacity: number, shape: 'round' | 'rectangular') => void;
 }
 
 export function TableForm({ onAdd }: TableFormProps) {
   const [name, setName] = useState('');
   const [capacity, setCapacity] = useState(8);
+  const [shape, setShape] = useState<'round' | 'rectangular'>('round');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onAdd(name.trim(), capacity);
+    onAdd(name.trim(), capacity, shape);
     setName('');
     setCapacity(8);
   };
@@ -45,6 +46,35 @@ export function TableForm({ onAdd }: TableFormProps) {
             onChange={e => setCapacity(parseInt(e.target.value) || 8)}
             className={inputClass}
           />
+        </div>
+        <div className="w-full sm:w-auto">
+          <label className={labelClass}>Shape</label>
+          <div className="flex gap-1.5 h-[42px]">
+            <button
+              type="button"
+              onClick={() => setShape('round')}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-md border text-sm font-body transition-colors ${
+                shape === 'round'
+                  ? 'bg-primary/20 border-primary text-primary'
+                  : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span className="w-4 h-4 rounded-full border-2 border-current inline-block" />
+              Round
+            </button>
+            <button
+              type="button"
+              onClick={() => setShape('rectangular')}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-md border text-sm font-body transition-colors ${
+                shape === 'rectangular'
+                  ? 'bg-primary/20 border-primary text-primary'
+                  : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span className="w-4 h-3 rounded-sm border-2 border-current inline-block" />
+              Rect
+            </button>
+          </div>
         </div>
         <div className="flex items-end">
           <button

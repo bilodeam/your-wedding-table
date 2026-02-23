@@ -11,6 +11,8 @@ export interface Table {
   id: string;
   name: string;
   capacity: number;
+  shape: 'round' | 'rectangular';
+  position: { x: number; y: number };
 }
 
 export interface WeddingData {

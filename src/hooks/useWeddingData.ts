@@ -64,8 +64,16 @@ export function useWeddingData() {
     });
   }, [tables]);
 
-  const addTable = useCallback((name: string, capacity: number) => {
-    setTables(prev => [...prev, { id: generateId(), name, capacity }]);
+  const addTable = useCallback((name: string, capacity: number, shape: 'round' | 'rectangular' = 'round') => {
+    setTables(prev => {
+      const col = prev.length % 3;
+      const row = Math.floor(prev.length / 3);
+      return [...prev, { id: generateId(), name, capacity, shape, position: { x: col * 280 + 20, y: row * 280 + 20 } }];
+    });
+  }, []);
+
+  const updateTablePosition = useCallback((id: string, position: { x: number; y: number }) => {
+    setTables(prev => prev.map(t => t.id === id ? { ...t, position } : t));
   }, []);
 
   const removeTable = useCallback((id: string) => {
@@ -91,7 +99,7 @@ export function useWeddingData() {
     guests, tables,
     addGuest, removeGuest, updateGuest,
     assignGuestToTable, addTable, removeTable,
-    getTableGuests, getSeatsUsed,
+    getTableGuests, getSeatsUsed, updateTablePosition,
     unassignedGuests, confirmedGuests,
     totalHeadcount, fullTables,
   };
