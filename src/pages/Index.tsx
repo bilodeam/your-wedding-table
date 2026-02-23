@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useWeddingData } from '@/hooks/useWeddingData';
 import { SummaryBar } from '@/components/wedding/SummaryBar';
 import { GuestForm } from '@/components/wedding/GuestForm';
+import { GuestImport } from '@/components/wedding/GuestImport';
 import { GuestList } from '@/components/wedding/GuestList';
 import { TableForm } from '@/components/wedding/TableForm';
 import { TableCard } from '@/components/wedding/TableCard';
@@ -9,7 +10,7 @@ import { TableCard } from '@/components/wedding/TableCard';
 const Index = () => {
   const {
     guests, tables,
-    addGuest, removeGuest, updateGuest,
+    addGuest, addGuestsBulk, removeGuest, updateGuest,
     assignGuestToTable, addTable, removeTable,
     getTableGuests, getSeatsUsed, updateTablePosition,
     unassignedGuests, confirmedGuests,
@@ -52,7 +53,10 @@ const Index = () => {
 
         {/* Forms row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <GuestForm onAdd={addGuest} />
+          <div className="space-y-3">
+            <GuestForm onAdd={addGuest} />
+            <GuestImport onImport={addGuestsBulk} />
+          </div>
           <TableForm onAdd={addTable} />
         </div>
 
