@@ -4,53 +4,53 @@
 
 @layer base {
   :root {
-    --background: 225 30% 8%;
-    --foreground: 40 30% 90%;
+    --background: 40 30% 96%;
+    --foreground: 30 10% 15%;
 
-    --card: 225 25% 12%;
-    --card-foreground: 40 30% 90%;
+    --card: 40 25% 99%;
+    --card-foreground: 30 10% 15%;
 
-    --popover: 225 25% 14%;
-    --popover-foreground: 40 30% 90%;
+    --popover: 40 25% 99%;
+    --popover-foreground: 30 10% 15%;
 
-    --primary: 40 60% 55%;
-    --primary-foreground: 225 30% 8%;
+    --primary: 150 25% 42%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 225 20% 18%;
-    --secondary-foreground: 40 30% 85%;
+    --secondary: 40 15% 92%;
+    --secondary-foreground: 30 10% 25%;
 
-    --muted: 225 18% 16%;
-    --muted-foreground: 225 10% 50%;
+    --muted: 40 12% 93%;
+    --muted-foreground: 30 5% 50%;
 
-    --accent: 40 60% 55%;
-    --accent-foreground: 225 30% 8%;
+    --accent: 150 25% 42%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 60% 50%;
-    --destructive-foreground: 40 30% 90%;
+    --destructive: 0 55% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 225 15% 20%;
-    --input: 225 15% 20%;
-    --ring: 40 60% 55%;
+    --border: 40 10% 88%;
+    --input: 40 10% 88%;
+    --ring: 150 25% 42%;
 
     --radius: 0.75rem;
 
-    --gold: 40 60% 55%;
-    --gold-light: 40 50% 70%;
-    --gold-dark: 40 70% 40%;
-    --cream: 40 30% 90%;
-    --cream-muted: 40 15% 65%;
+    --gold: 150 25% 42%;
+    --gold-light: 150 20% 60%;
+    --gold-dark: 150 30% 32%;
+    --cream: 40 20% 97%;
+    --cream-muted: 30 8% 55%;
     --success: 150 40% 40%;
     --warning: 45 70% 50%;
-    --neutral: 225 10% 35%;
+    --neutral: 30 5% 65%;
 
-    --sidebar-background: 225 25% 10%;
-    --sidebar-foreground: 40 30% 90%;
-    --sidebar-primary: 40 60% 55%;
-    --sidebar-primary-foreground: 225 30% 8%;
-    --sidebar-accent: 225 20% 18%;
-    --sidebar-accent-foreground: 40 30% 90%;
-    --sidebar-border: 225 15% 20%;
-    --sidebar-ring: 40 60% 55%;
+    --sidebar-background: 40 20% 97%;
+    --sidebar-foreground: 30 10% 15%;
+    --sidebar-primary: 150 25% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 40 15% 92%;
+    --sidebar-accent-foreground: 30 10% 25%;
+    --sidebar-border: 40 10% 88%;
+    --sidebar-ring: 150 25% 42%;
 
     --font-display: 'Playfair Display', Georgia, serif;
     --font-body: 'DM Sans', system-ui, sans-serif;
