@@ -6,6 +6,7 @@ import { GuestImport } from '@/components/wedding/GuestImport';
 import { GuestList } from '@/components/wedding/GuestList';
 import { TableForm } from '@/components/wedding/TableForm';
 import { TableCard } from '@/components/wedding/TableCard';
+import { ExportPdf } from '@/components/wedding/ExportPdf';
 
 const Index = () => {
   const {
@@ -56,6 +57,7 @@ const Index = () => {
           <div className="space-y-3">
             <GuestForm onAdd={addGuest} />
             <GuestImport onImport={addGuestsBulk} />
+            <ExportPdf tables={tables} guests={guests} getTableGuests={getTableGuests} getSeatsUsed={getSeatsUsed} />
           </div>
           <TableForm onAdd={addTable} />
         </div>
