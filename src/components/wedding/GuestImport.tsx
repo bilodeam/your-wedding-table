@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { read, utils } from 'xlsx';
+import { SampleDownload } from './SampleDownload';
 import { Guest } from '@/types/wedding';
 import { toast } from 'sonner';
 
