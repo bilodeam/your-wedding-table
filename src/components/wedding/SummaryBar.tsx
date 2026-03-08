@@ -19,8 +19,9 @@ export function SummaryBar({ totalGuests, totalHeadcount, confirmed, unassigned,
   ];
 
   // Dietary tally (excluding 'none')
+  const safeGuests = guests || [];
   const dietaryCounts = (['vegetarian', 'vegan', 'gluten-free'] as const)
-    .map(d => ({ label: DIETARY_LABELS[d], count: guests.filter(g => g.dietary === d).length }))
+    .map(d => ({ label: DIETARY_LABELS[d], count: safeGuests.filter(g => g.dietary === d).length }))
     .filter(d => d.count > 0);
 
   return (
