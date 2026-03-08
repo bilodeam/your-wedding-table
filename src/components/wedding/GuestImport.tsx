@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { read, utils } from 'xlsx';
+import { SampleDownload } from './SampleDownload';
 import { Guest } from '@/types/wedding';
 import { toast } from 'sonner';
 
@@ -88,9 +89,13 @@ export function GuestImport({ onImport }: GuestImportProps) {
         <span>📄</span>
         Import Excel / CSV
       </button>
-      <p className="text-[10px] text-muted-foreground font-body mt-1.5">
-        Columns: Name, Plus One, Dietary, RSVP
-      </p>
+      <div className="flex items-center gap-2 mt-1.5">
+        <p className="text-[10px] text-muted-foreground font-body">
+          Columns: Name, Plus One, Dietary, RSVP
+        </p>
+        <span className="text-[10px] text-muted-foreground">·</span>
+        <SampleDownload />
+      </div>
     </div>
   );
 }
