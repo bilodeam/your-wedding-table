@@ -22,7 +22,8 @@ export function TableForm({ onAdd }: TableFormProps) {
   const labelClass = "block text-[10px] uppercase tracking-widest text-muted-foreground mb-1 font-body";
 
   return (
-    <form onSubmit={handleSubmit} className="bg-card border border-border rounded-lg px-4 py-3 animate-fade-in">
+    <form onSubmit={handleSubmit} className="bg-card border border-border rounded-lg p-5 animate-fade-in">
+      <h3 className="font-display text-lg font-semibold text-foreground mb-4">Add Table</h3>
       <div className="flex items-end gap-2">
         <div className="flex-1 min-w-0">
           <label className={labelClass}>Table Name *</label>
