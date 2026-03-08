@@ -51,6 +51,7 @@ const Index = () => {
           unassigned={unassignedGuests.length}
           tablesCount={tables.length}
           fullTables={fullTables}
+          guests={guests}
         />
 
         {/* Forms row */}
