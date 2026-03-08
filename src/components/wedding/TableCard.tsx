@@ -8,6 +8,7 @@ interface TableCardProps {
   onDropGuest: (guestId: string, tableId: string) => void;
   onUnassignGuest: (guestId: string) => void;
   onRemoveTable: (tableId: string) => void;
+  onUpdateTable: (tableId: string, updates: Partial<Table>) => void;
   onPositionChange: (tableId: string, position: { x: number; y: number }) => void;
   onSwapSeats: (tableId: string, fromIndex: number, toIndex: number) => void;
   containerRef: React.RefObject<HTMLDivElement>;
@@ -23,7 +24,9 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGuest, onRemoveTable, onPositionChange, onSwapSeats, containerRef }: TableCardProps) {
+export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGuest, onRemoveTable, onUpdateTable, onPositionChange, onSwapSeats, containerRef }: TableCardProps) {
+  const [editingCapacity, setEditingCapacity] = useState(false);
+  const [capacityValue, setCapacityValue] = useState(String(table.capacity));
   const fillRatio = seatsUsed / table.capacity;
   const statusColor = fillRatio >= 1
     ? 'border-success/60 bg-success/5'
@@ -119,9 +122,34 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
           <h4 className="font-display text-base font-semibold text-foreground">{table.name}</h4>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-body text-muted-foreground">
-            {isRound ? '○' : '▭'} {seatsUsed}/{table.capacity}
-          </span>
+          {editingCapacity ? (
+            <input
+              autoFocus
+              type="number"
+              min={seatsUsed || 1}
+              value={capacityValue}
+              onChange={(e) => setCapacityValue(e.target.value)}
+              onBlur={() => {
+                const val = Math.max(seatsUsed || 1, parseInt(capacityValue) || 1);
+                onUpdateTable(table.id, { capacity: val });
+                setCapacityValue(String(val));
+                setEditingCapacity(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                if (e.key === 'Escape') { setCapacityValue(String(table.capacity)); setEditingCapacity(false); }
+              }}
+              className="w-10 h-5 text-[10px] text-center bg-secondary border border-border rounded font-body text-foreground"
+            />
+          ) : (
+            <button
+              onClick={() => { setCapacityValue(String(table.capacity)); setEditingCapacity(true); }}
+              className="text-[10px] font-body text-muted-foreground hover:text-foreground transition-colors"
+              title="Click to edit capacity"
+            >
+              {isRound ? '○' : '▭'} {seatsUsed}/{table.capacity}
+            </button>
+          )}
           <button
             onClick={() => onRemoveTable(table.id)}
             className="text-muted-foreground hover:text-destructive text-xs transition-colors"
