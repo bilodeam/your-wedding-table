@@ -1,4 +1,4 @@
-import { Guest, Table, DIETARY_LABELS } from '@/types/wedding';
+import { Guest, Table } from '@/types/wedding';
 import jsPDF from 'jspdf';
 
 interface ExportPdfProps {
@@ -43,7 +43,7 @@ interface SeatInfo {
   initials: string;
   name: string;
   filled: boolean;
-  dietary: string;
+  meal: string;
   isPlus: boolean;
 }
 
@@ -57,32 +57,30 @@ function buildSeatData(table: Table, guests: Guest[]): SeatInfo[] {
     const guest = guestMap.get(guestId);
     if (!guest) return;
     const name = isPlus ? guest.plusOne : guest.name;
-    const dietary = isPlus ? 'none' : guest.dietary;
+    const meal = isPlus ? '' : guest.meal;
     if (!name) return;
     seats.push({
       initials: getInitials(name),
       name,
       filled: true,
-      dietary: dietary !== 'none' ? DIETARY_LABELS[dietary] : '',
+      meal: meal || '',
       isPlus,
     });
   });
 
   while (seats.length < table.capacity) {
-    seats.push({ initials: '', name: '', filled: false, dietary: '', isPlus: false });
+    seats.push({ initials: '', name: '', filled: false, meal: '', isPlus: false });
   }
 
   return seats;
 }
 
 function drawRoundTable(doc: jsPDF, cx: number, cy: number, radius: number, seats: SeatInfo[]) {
-  // Table circle
   setColor(doc, COLORS.border, 'draw');
   setColor(doc, [240, 237, 230], 'fill');
   doc.setLineWidth(0.4);
   doc.circle(cx, cy, radius, 'FD');
 
-  // Seats around the circle
   const seatRadius = Math.min(4, radius * 0.35);
   const orbitRadius = radius + seatRadius + 2;
 
@@ -112,7 +110,6 @@ function drawRoundTable(doc: jsPDF, cx: number, cy: number, radius: number, seat
 }
 
 function drawRectTable(doc: jsPDF, cx: number, cy: number, tableW: number, tableH: number, seats: SeatInfo[]) {
-  // Table rectangle
   setColor(doc, COLORS.border, 'draw');
   setColor(doc, [240, 237, 230], 'fill');
   doc.setLineWidth(0.4);
@@ -121,13 +118,6 @@ function drawRectTable(doc: jsPDF, cx: number, cy: number, tableW: number, table
   const seatR = 3.5;
   const gap = 1.5;
   const totalSeats = seats.length;
-
-  // Distribute seats: top, bottom, left side, right side
-  const longSide = Math.ceil(totalSeats / 2);
-  const topCount = Math.ceil(longSide / 1);
-  const bottomCount = totalSeats - topCount;
-
-  // Actually let's split evenly: half top, half bottom
   const top = Math.ceil(totalSeats / 2);
   const bottom = totalSeats - top;
 
@@ -150,20 +140,16 @@ function drawRectTable(doc: jsPDF, cx: number, cy: number, tableW: number, table
     }
   };
 
-  // Top row
   const topY = cy - tableH / 2 - seatR - gap;
   const topSpacing = tableW / (top + 1);
   for (let i = 0; i < top; i++) {
-    const sx = cx - tableW / 2 + topSpacing * (i + 1);
-    drawSeatAt(sx, topY, seats[i]);
+    drawSeatAt(cx - tableW / 2 + topSpacing * (i + 1), topY, seats[i]);
   }
 
-  // Bottom row
   const bottomY = cy + tableH / 2 + seatR + gap;
   const bottomSpacing = tableW / (bottom + 1);
   for (let i = 0; i < bottom; i++) {
-    const sx = cx - tableW / 2 + bottomSpacing * (i + 1);
-    drawSeatAt(sx, bottomY, seats[top + i]);
+    drawSeatAt(cx - tableW / 2 + bottomSpacing * (i + 1), bottomY, seats[top + i]);
   }
 }
 
@@ -174,24 +160,20 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
     const pageH = doc.internal.pageSize.getHeight();
     const margin = 16;
 
-    // ─── Background ───
     setColor(doc, COLORS.ivory, 'fill');
     doc.rect(0, 0, pageW, pageH, 'F');
 
-    // ─── Header band ───
     setColor(doc, COLORS.cream, 'fill');
     doc.rect(0, 0, pageW, 38, 'F');
     setColor(doc, COLORS.border, 'draw');
     doc.setLineWidth(0.3);
     doc.line(0, 38, pageW, 38);
 
-    // Title
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(24);
     setColor(doc, COLORS.charcoal);
     doc.text('Seating Chart', pageW / 2, 18, { align: 'center' });
 
-    // Subtitle
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     setColor(doc, COLORS.warmGray);
@@ -208,7 +190,6 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
     setColor(doc, COLORS.warmGray);
     doc.text(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), pageW - margin, 35, { align: 'right' });
 
-    // ─── Table cards with visual seat layout ───
     const colCount = Math.min(tables.length, 4);
     const gapX = 5;
     const gapY = 6;
@@ -223,7 +204,6 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
       const tableGuestsFiltered = guests.filter(g => g.tableId === table.id);
       const seatData = buildSeatData(table, tableGuestsFiltered);
 
-      // Compact card heights
       const visualH = table.shape === 'round' ? 30 : 26;
       const nameLineH = 3.8;
       const filledSeats = seatData.filter(s => s.filled);
@@ -231,7 +211,6 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
       const headerH = 10;
       const cardH = headerH + visualH + nameListH + 4;
 
-      // Page break check
       if (currentY + cardH > pageH - 12 && idx > 0) {
         doc.addPage();
         setColor(doc, COLORS.ivory, 'fill');
@@ -241,18 +220,15 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
         rowMaxH = 0;
       }
 
-      // Card shadow
       setColor(doc, [210, 205, 195], 'fill');
       doc.roundedRect(currentX + 0.5, currentY + 0.5, colW, cardH, 2, 2, 'F');
 
-      // Card background
       setColor(doc, COLORS.cream, 'fill');
       doc.roundedRect(currentX, currentY, colW, cardH, 2, 2, 'F');
       setColor(doc, isFull ? COLORS.sage : COLORS.border, 'draw');
       doc.setLineWidth(isFull ? 0.4 : 0.2);
       doc.roundedRect(currentX, currentY, colW, cardH, 2, 2, 'S');
 
-      // Status dot + Table name on one line, compact
       const dotX = currentX + 4;
       const dotY = currentY + 5.5;
       if (isFull) {
@@ -264,20 +240,17 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
       }
       doc.circle(dotX, dotY, 1, 'F');
 
-      // Table name
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
       setColor(doc, COLORS.charcoal);
       doc.text(table.name, currentX + 7, currentY + 6.5);
 
-      // Seat count
       const badgeText = `${seatsUsed}/${table.capacity}`;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(6);
       setColor(doc, isFull ? COLORS.sage : COLORS.warmGray);
       doc.text(badgeText, currentX + colW - 4, currentY + 6.5, { align: 'right' });
 
-      // ─── Visual seat layout ───
       const vizCx = currentX + colW / 2;
       const vizCy = currentY + headerH + visualH / 2;
 
@@ -290,13 +263,11 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
         drawRectTable(doc, vizCx, vizCy, tw, th, seatData);
       }
 
-      // Divider
       const divY = currentY + headerH + visualH + 1;
       setColor(doc, COLORS.border, 'draw');
       doc.setLineWidth(0.1);
       doc.line(currentX + 3, divY, currentX + colW - 3, divY);
 
-      // ─── Name list below ───
       const listStartY = divY + 2;
       if (filledSeats.length === 0) {
         doc.setFont('helvetica', 'italic');
@@ -311,11 +282,11 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
           setColor(doc, COLORS.charcoal);
           doc.text(`${i + 1}. ${seat.name}`, currentX + 4, ly);
 
-          if (seat.dietary) {
+          if (seat.meal) {
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(4.5);
             setColor(doc, COLORS.sage);
-            doc.text(seat.dietary, currentX + colW - 4, ly, { align: 'right' });
+            doc.text(seat.meal, currentX + colW - 4, ly, { align: 'right' });
           }
         });
       }
@@ -331,7 +302,6 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
       }
     });
 
-    // ─── Footer ───
     const footY = pageH - 6;
     setColor(doc, COLORS.border, 'draw');
     doc.setLineWidth(0.2);
