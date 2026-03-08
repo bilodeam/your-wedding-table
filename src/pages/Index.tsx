@@ -58,9 +58,11 @@ const Index = () => {
           <div className="space-y-3">
             <GuestForm onAdd={addGuest} />
             <GuestImport onImport={addGuestsBulk} />
+          </div>
+          <div className="space-y-3">
+            <TableForm onAdd={addTable} />
             <ExportPdf tables={tables} guests={guests} getTableGuests={getTableGuests} getSeatsUsed={getSeatsUsed} />
           </div>
-          <TableForm onAdd={addTable} />
         </div>
 
         {/* Main content: guests + tables */}
