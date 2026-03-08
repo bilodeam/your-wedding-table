@@ -145,6 +145,10 @@ export function useWeddingData() {
     });
   }, []);
 
+  const updateTable = useCallback((id: string, updates: Partial<Table>) => {
+    setTables(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+  }, []);
+
   const removeTable = useCallback((id: string) => {
     setTables(prev => prev.filter(t => t.id !== id));
     setGuests(prev => prev.map(g => g.tableId === id ? { ...g, tableId: null } : g));
@@ -167,7 +171,7 @@ export function useWeddingData() {
   return {
     guests, tables,
     addGuest, addGuestsBulk, removeGuest, updateGuest,
-    assignGuestToTable, addTable, removeTable, swapSeats,
+    assignGuestToTable, addTable, removeTable, updateTable, swapSeats,
     getTableGuests, getSeatsUsed, updateTablePosition,
     unassignedGuests, confirmedGuests,
     totalHeadcount, fullTables,
