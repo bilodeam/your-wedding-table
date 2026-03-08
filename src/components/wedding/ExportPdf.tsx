@@ -31,15 +31,11 @@ function drawDecorativeLine(doc: jsPDF, x: number, y: number, width: number) {
   const cx = x + width / 2;
   setColor(doc, COLORS.sageLighter, 'draw');
   doc.setLineWidth(0.3);
-  // Left line
-  doc.line(cx - width * 0.35, y, cx - 8, y);
-  // Right line
-  doc.line(cx + 8, y, cx + width * 0.35, y);
-  // Center diamond
+  doc.line(cx - width * 0.35, y, cx - 4, y);
+  doc.line(cx + 4, y, cx + width * 0.35, y);
+  // Center dot instead of diamond (avoids unicode)
   setColor(doc, COLORS.sage, 'fill');
-  const d = 2;
-  doc.triangle(cx, y - d, cx + d, y, cx, y + d, 'F');
-  doc.triangle(cx, y - d, cx - d, y, cx, y + d, 'F');
+  doc.circle(cx, y, 1.2, 'F');
 }
 
 export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: ExportPdfProps) {
@@ -73,7 +69,7 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
     const totalHeadcount = guests.reduce((a, g) => a + 1 + (g.plusOne ? 1 : 0), 0);
     const confirmed = guests.filter(g => g.rsvp === 'confirmed').length;
     doc.text(
-      `${guests.length} guests · ${totalHeadcount} headcount · ${confirmed} confirmed · ${tables.length} tables`,
+      `${guests.length} guests  |  ${totalHeadcount} headcount  |  ${confirmed} confirmed  |  ${tables.length} tables`,
       pageW / 2, 25, { align: 'center' }
     );
 
@@ -151,7 +147,7 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
       }
       doc.circle(dotX, dotY, 1.5, 'F');
 
-      // Table name
+      // Table name — reset font explicitly
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       setColor(doc, COLORS.charcoal);
@@ -169,11 +165,16 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
       setColor(doc, isFull ? COLORS.sage : COLORS.warmGray);
       doc.text(badgeText, badgeX + badgeW / 2, badgeY + 4.3, { align: 'center' });
 
-      // Shape icon
-      const shapeIcon = table.shape === 'round' ? '○' : '▭';
-      doc.setFontSize(7);
-      setColor(doc, COLORS.warmGray);
-      doc.text(shapeIcon, badgeX - 5, currentY + 8.3);
+      // Shape indicator — draw a small shape instead of unicode
+      setColor(doc, COLORS.warmGray, 'draw');
+      doc.setLineWidth(0.3);
+      const shapeX = badgeX - 6;
+      const shapeY = currentY + 7;
+      if (table.shape === 'round') {
+        doc.circle(shapeX, shapeY, 2.5, 'S');
+      } else {
+        doc.rect(shapeX - 3, shapeY - 1.8, 6, 3.6, 'S');
+      }
 
       // Divider line
       const divY = currentY + headerH - 1;
@@ -201,11 +202,11 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
           setColor(doc, COLORS.sage);
           doc.text(String(i + 1), circleX, ly, { align: 'center' });
 
-          // Name
+          // Name — reset font before each entry
           doc.setFont('helvetica', line.isPlus ? 'italic' : 'normal');
           doc.setFontSize(8.5);
           setColor(doc, COLORS.charcoal);
-          const displayName = line.isPlus ? `↳ ${line.name}` : line.name;
+          const displayName = line.isPlus ? `  ${line.name}` : line.name;
           doc.text(displayName, currentX + 12, ly);
 
           // Dietary tag
@@ -239,7 +240,7 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     setColor(doc, COLORS.warmGray);
-    doc.text('Generated with Seating Plan ✦', pageW / 2, footY, { align: 'center' });
+    doc.text('Generated with Seating Plan', pageW / 2, footY, { align: 'center' });
 
     doc.save('seating-chart.pdf');
   };
