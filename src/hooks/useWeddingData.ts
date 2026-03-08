@@ -105,7 +105,44 @@ export function useWeddingData() {
   }, []);
 
   const updateTablePosition = useCallback((id: string, position: { x: number; y: number }) => {
-    setTables(prev => prev.map(t => t.id === id ? { ...t, position } : t));
+    const TABLE_W = 240;
+    const TABLE_H = 260;
+    const PAD = 12;
+
+    setTables(prev => {
+      let updated = prev.map(t => t.id === id ? { ...t, position } : t);
+      
+      // Resolve collisions iteratively
+      let changed = true;
+      let iterations = 0;
+      while (changed && iterations < 20) {
+        changed = false;
+        iterations++;
+        const movedTable = updated.find(t => t.id === id)!;
+        
+        updated = updated.map(t => {
+          if (t.id === id) return t;
+          
+          const overlapX = (TABLE_W + PAD) - Math.abs(movedTable.position.x - t.position.x);
+          const overlapY = (TABLE_H + PAD) - Math.abs(movedTable.position.y - t.position.y);
+          
+          if (overlapX > 0 && overlapY > 0) {
+            changed = true;
+            // Push in the direction of least overlap
+            if (overlapX < overlapY) {
+              const dir = t.position.x >= movedTable.position.x ? 1 : -1;
+              return { ...t, position: { x: Math.max(0, t.position.x + dir * overlapX), y: t.position.y } };
+            } else {
+              const dir = t.position.y >= movedTable.position.y ? 1 : -1;
+              return { ...t, position: { x: t.position.x, y: Math.max(0, t.position.y + dir * overlapY) } };
+            }
+          }
+          return t;
+        });
+      }
+      
+      return updated;
+    });
   }, []);
 
   const removeTable = useCallback((id: string) => {
