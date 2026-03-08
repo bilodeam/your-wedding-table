@@ -12,21 +12,23 @@ export function GuestForm({ onAdd, mealOptions, importElement }: GuestFormProps)
   const [plusOne, setPlusOne] = useState('');
   const [meal, setMeal] = useState('');
   const [rsvp, setRsvp] = useState<Guest['rsvp']>('pending');
+  const [notes, setNotes] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onAdd({ name: name.trim(), plusOne: plusOne.trim(), meal, rsvp });
+    onAdd({ name: name.trim(), plusOne: plusOne.trim(), meal, rsvp, notes: notes.trim() });
     setName('');
     setPlusOne('');
     setMeal('');
     setRsvp('pending');
+    setNotes('');
   };
 
   const inputClass =
-    "w-full bg-secondary border border-border rounded-md px-3 py-2.5 text-foreground text-sm font-body placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors";
-  const labelClass = "block text-xs uppercase tracking-widest text-muted-foreground mb-1.5 font-body";
-  const selectClass = inputClass + " appearance-none cursor-pointer";
+    'w-full bg-secondary border border-border rounded-md px-3 py-2.5 text-foreground text-sm font-body placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors';
+  const labelClass = 'block text-xs uppercase tracking-widest text-muted-foreground mb-1.5 font-body';
+  const selectClass = inputClass + ' appearance-none cursor-pointer';
 
   return (
     <form onSubmit={handleSubmit} className="bg-card border border-border rounded-lg p-5 animate-fade-in">
@@ -69,6 +71,16 @@ export function GuestForm({ onAdd, mealOptions, importElement }: GuestFormProps)
             <option value="pending">Pending</option>
             <option value="declined">Declined</option>
           </select>
+        </div>
+        <div className="sm:col-span-2">
+          <label className={labelClass}>Notes</label>
+          <input
+            type="text"
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="e.g. Wheelchair access needed, seat near exit…"
+            className={inputClass}
+          />
         </div>
       </div>
       <div className="mt-4 flex items-start gap-3 flex-wrap">

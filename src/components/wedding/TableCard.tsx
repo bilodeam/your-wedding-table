@@ -24,44 +24,56 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGuest, onRemoveTable, onUpdateTable, onPositionChange, onSwapSeats, containerRef }: TableCardProps) {
+export function TableCard({
+  table, guests, seatsUsed,
+  onDropGuest, onUnassignGuest, onRemoveTable, onUpdateTable,
+  onPositionChange, onSwapSeats, containerRef,
+}: TableCardProps) {
   const [editingCapacity, setEditingCapacity] = useState(false);
   const [capacityValue, setCapacityValue] = useState(String(table.capacity));
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(table.name);
+
   const fillRatio = seatsUsed / table.capacity;
-  const statusColor = fillRatio >= 1
-    ? 'border-success/60 bg-success/5'
-    : fillRatio >= 0.7
+  const statusColor =
+    fillRatio >= 1
+      ? 'border-success/60 bg-success/5'
+      : fillRatio >= 0.7
       ? 'border-warning/60 bg-warning/5'
       : 'border-border bg-card';
 
-  const statusDot = fillRatio >= 1
-    ? 'bg-success'
-    : fillRatio >= 0.7
-      ? 'bg-warning'
-      : 'bg-neutral';
+  const statusDot =
+    fillRatio >= 1 ? 'bg-success' : fillRatio >= 0.7 ? 'bg-warning' : 'bg-neutral';
 
   const [isDraggingTable, setIsDraggingTable] = useState(false);
   const [draggingSeatIndex, setDraggingSeatIndex] = useState<number | null>(null);
   const [hoverSeatIndex, setHoverSeatIndex] = useState<number | null>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
 
+  // FIX: Shared drag logic used by both mouse and touch events
+  const startTableDrag = (clientX: number, clientY: number, targetEl: HTMLElement) => {
+    setIsDraggingTable(true);
+    const rect = targetEl.getBoundingClientRect();
+    dragOffset.current = { x: clientX - rect.left, y: clientY - rect.top };
+  };
+
+  const moveTable = (clientX: number, clientY: number) => {
+    if (!containerRef.current) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const x =
+      clientX - containerRect.left - dragOffset.current.x + containerRef.current.scrollLeft;
+    const y =
+      clientY - containerRect.top - dragOffset.current.y + containerRef.current.scrollTop;
+    onPositionChange(table.id, { x: Math.max(0, x), y: Math.max(0, y) });
+  };
+
+  // Mouse drag
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button, input, [data-seat]')) return;
     e.preventDefault();
-    setIsDraggingTable(true);
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    startTableDrag(e.clientX, e.clientY, e.currentTarget as HTMLElement);
 
-    const handleMouseMove = (ev: MouseEvent) => {
-      if (!containerRef.current) return;
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const x = ev.clientX - containerRect.left - dragOffset.current.x + containerRef.current.scrollLeft;
-      const y = ev.clientY - containerRect.top - dragOffset.current.y + containerRef.current.scrollTop;
-      onPositionChange(table.id, { x: Math.max(0, x), y: Math.max(0, y) });
-    };
-
+    const handleMouseMove = (ev: MouseEvent) => moveTable(ev.clientX, ev.clientY);
     const handleMouseUp = () => {
       setIsDraggingTable(false);
       window.removeEventListener('mousemove', handleMouseMove);
@@ -70,6 +82,27 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  // FIX: Touch drag support for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest('button, input, [data-seat]')) return;
+    const touch = e.touches[0];
+    startTableDrag(touch.clientX, touch.clientY, e.currentTarget as HTMLElement);
+
+    const handleTouchMove = (ev: TouchEvent) => {
+      ev.preventDefault(); // prevent page scroll while dragging
+      const t = ev.touches[0];
+      moveTable(t.clientX, t.clientY);
+    };
+    const handleTouchEnd = () => {
+      setIsDraggingTable(false);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -90,7 +123,14 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
 
   // Build seat data from seatOrder
   const guestMap = new Map(guests.map(g => [g.id, g]));
-  const seatData: { key: string; initials: string; filled: boolean; label: string; orderIndex: number }[] = [];
+  const seatData: {
+    key: string;
+    initials: string;
+    filled: boolean;
+    label: string;
+    orderIndex: number;
+    notes?: string;
+  }[] = [];
 
   table.seatOrder.forEach((entry, i) => {
     const isPlus = entry.endsWith(':plus');
@@ -99,15 +139,69 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
     if (!guest) return;
     const name = isPlus ? guest.plusOne : guest.name;
     if (!name) return;
-    seatData.push({ key: entry, initials: getInitials(name), filled: true, label: name, orderIndex: i });
+    seatData.push({
+      key: entry,
+      initials: getInitials(name),
+      filled: true,
+      label: name,
+      orderIndex: i,
+      notes: !isPlus ? guest.notes : undefined,
+    });
   });
 
-  // Fill empty seats
   while (seatData.length < table.capacity) {
-    seatData.push({ key: `empty-${seatData.length}`, initials: '', filled: false, label: 'Empty seat', orderIndex: -1 });
+    seatData.push({
+      key: `empty-${seatData.length}`,
+      initials: '',
+      filled: false,
+      label: 'Empty seat',
+      orderIndex: -1,
+    });
   }
 
   const isRound = table.shape === 'round';
+
+  const seatEl = (seat: (typeof seatData)[0], i: number, style: React.CSSProperties, extraClass?: string) => {
+    const isDragSource = draggingSeatIndex === i;
+    const isDropTarget =
+      hoverSeatIndex === i && draggingSeatIndex !== null && draggingSeatIndex !== i;
+    return (
+      <div
+        key={seat.key}
+        data-seat
+        draggable={seat.filled}
+        onDragStart={e => {
+          if (!seat.filled) return;
+          e.stopPropagation();
+          setDraggingSeatIndex(i);
+          e.dataTransfer.effectAllowed = 'move';
+        }}
+        onDragOver={e => { e.preventDefault(); e.stopPropagation(); setHoverSeatIndex(i); }}
+        onDragLeave={() => setHoverSeatIndex(null)}
+        onDrop={e => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (draggingSeatIndex !== null && seat.filled && seat.orderIndex >= 0) {
+            const fromOrder = seatData[draggingSeatIndex]?.orderIndex;
+            if (fromOrder !== undefined && fromOrder >= 0)
+              onSwapSeats(table.id, fromOrder, seat.orderIndex);
+          }
+          setDraggingSeatIndex(null);
+          setHoverSeatIndex(null);
+        }}
+        onDragEnd={() => { setDraggingSeatIndex(null); setHoverSeatIndex(null); }}
+        className={`absolute w-7 h-7 rounded-full border flex items-center justify-center text-[9px] font-body font-medium transition-all ${
+          seat.filled
+            ? 'bg-primary/30 border-primary/50 text-primary cursor-grab active:cursor-grabbing'
+            : 'bg-secondary border-border text-muted-foreground'
+        } ${isDragSource ? 'opacity-40 scale-90' : ''} ${isDropTarget ? 'ring-2 ring-primary scale-110' : ''} ${extraClass || ''}`}
+        style={style}
+        title={seat.notes ? `${seat.label} — ${seat.notes}` : seat.label}
+      >
+        {seat.filled ? seat.initials : ''}
+      </div>
+    );
+  };
 
   return (
     <div
@@ -115,9 +209,13 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onMouseDown={handleMouseDown}
-      className={`rounded-lg border-2 p-4 transition-all animate-scale-in w-[240px] select-none ${statusColor} ${isDraggingTable ? 'shadow-lg shadow-primary/20 z-20' : ''}`}
-      style={{ cursor: isDraggingTable ? 'grabbing' : 'grab' }}
+      onTouchStart={handleTouchStart}
+      className={`rounded-lg border-2 p-4 transition-all animate-scale-in w-[240px] select-none ${statusColor} ${
+        isDraggingTable ? 'shadow-lg shadow-primary/20 z-20' : ''
+      }`}
+      style={{ cursor: isDraggingTable ? 'grabbing' : 'grab', touchAction: 'none' }}
     >
+      {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${statusDot}`} />
@@ -126,14 +224,14 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
               autoFocus
               type="text"
               value={nameValue}
-              onChange={(e) => setNameValue(e.target.value)}
+              onChange={e => setNameValue(e.target.value)}
               onBlur={() => {
                 const val = nameValue.trim() || table.name;
                 onUpdateTable(table.id, { name: val });
                 setNameValue(val);
                 setEditingName(false);
               }}
-              onKeyDown={(e) => {
+              onKeyDown={e => {
                 if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
                 if (e.key === 'Escape') { setNameValue(table.name); setEditingName(false); }
               }}
@@ -156,14 +254,14 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
               type="number"
               min={seatsUsed || 1}
               value={capacityValue}
-              onChange={(e) => setCapacityValue(e.target.value)}
+              onChange={e => setCapacityValue(e.target.value)}
               onBlur={() => {
                 const val = Math.max(seatsUsed || 1, parseInt(capacityValue) || 1);
                 onUpdateTable(table.id, { capacity: val });
                 setCapacityValue(String(val));
                 setEditingCapacity(false);
               }}
-              onKeyDown={(e) => {
+              onKeyDown={e => {
                 if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
                 if (e.key === 'Escape') { setCapacityValue(String(table.capacity)); setEditingCapacity(false); }
               }}
@@ -191,78 +289,43 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
       {/* Seat visualization */}
       {isRound ? (
         <div className="relative w-[140px] h-[140px] mx-auto mb-3">
-          {/* Table circle */}
           <div className="absolute inset-[25px] rounded-full border-2 border-border bg-secondary/30" />
           {seatData.map((seat, i) => {
             const angle = (i / table.capacity) * 360 - 90;
             const rad = (angle * Math.PI) / 180;
             const cx = 70 + 55 * Math.cos(rad);
             const cy = 70 + 55 * Math.sin(rad);
-            const isDragSource = draggingSeatIndex === i;
-            const isDropTarget = hoverSeatIndex === i && draggingSeatIndex !== null && draggingSeatIndex !== i;
-            return (
-              <div
-                key={seat.key}
-                data-seat
-                draggable={seat.filled}
-                onDragStart={(e) => {
-                  if (!seat.filled) return;
-                  e.stopPropagation();
-                  setDraggingSeatIndex(i);
-                  e.dataTransfer.effectAllowed = 'move';
-                }}
-                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setHoverSeatIndex(i); }}
-                onDragLeave={() => setHoverSeatIndex(null)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (draggingSeatIndex !== null && seat.filled && seat.orderIndex >= 0) {
-                    const fromOrder = seatData[draggingSeatIndex]?.orderIndex;
-                    if (fromOrder !== undefined && fromOrder >= 0) onSwapSeats(table.id, fromOrder, seat.orderIndex);
-                  }
-                  setDraggingSeatIndex(null);
-                  setHoverSeatIndex(null);
-                }}
-                onDragEnd={() => { setDraggingSeatIndex(null); setHoverSeatIndex(null); }}
-                className={`absolute w-7 h-7 rounded-full border flex items-center justify-center text-[9px] font-body font-medium transition-all ${
-                  seat.filled
-                    ? 'bg-primary/30 border-primary/50 text-primary cursor-grab active:cursor-grabbing'
-                    : 'bg-secondary border-border text-muted-foreground'
-                } ${isDragSource ? 'opacity-40 scale-90' : ''} ${isDropTarget ? 'ring-2 ring-primary scale-110' : ''}`}
-                style={{ left: cx - 14, top: cy - 14 }}
-                title={seat.label}
-              >
-                {seat.filled ? seat.initials : ''}
-              </div>
-            );
+            return seatEl(seat, i, { left: cx - 14, top: cy - 14 });
           })}
         </div>
       ) : (
         <div className="mb-3">
           <div className="border-2 border-border bg-secondary/30 rounded-md px-2 py-3 min-h-[60px]">
-            <div className="flex flex-wrap gap-1.5 justify-center">
+            <div className="flex flex-wrap gap-1.5 justify-center relative">
               {seatData.map((seat, i) => {
                 const isDragSource = draggingSeatIndex === i;
-                const isDropTarget = hoverSeatIndex === i && draggingSeatIndex !== null && draggingSeatIndex !== i;
+                const isDropTarget =
+                  hoverSeatIndex === i && draggingSeatIndex !== null && draggingSeatIndex !== i;
                 return (
                   <div
                     key={seat.key}
                     data-seat
                     draggable={seat.filled}
-                    onDragStart={(e) => {
+                    onDragStart={e => {
                       if (!seat.filled) return;
                       e.stopPropagation();
                       setDraggingSeatIndex(i);
                       e.dataTransfer.effectAllowed = 'move';
                     }}
-                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setHoverSeatIndex(i); }}
+                    onDragOver={e => { e.preventDefault(); e.stopPropagation(); setHoverSeatIndex(i); }}
                     onDragLeave={() => setHoverSeatIndex(null)}
-                    onDrop={(e) => {
+                    onDrop={e => {
                       e.preventDefault();
                       e.stopPropagation();
                       if (draggingSeatIndex !== null && seat.filled && seat.orderIndex >= 0) {
                         const fromOrder = seatData[draggingSeatIndex]?.orderIndex;
-                        if (fromOrder !== undefined && fromOrder >= 0) onSwapSeats(table.id, fromOrder, seat.orderIndex);
+                        if (fromOrder !== undefined && fromOrder >= 0)
+                          onSwapSeats(table.id, fromOrder, seat.orderIndex);
                       }
                       setDraggingSeatIndex(null);
                       setHoverSeatIndex(null);
@@ -273,7 +336,7 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
                         ? 'bg-primary/30 border-primary/50 text-primary cursor-grab active:cursor-grabbing'
                         : 'bg-secondary border-border text-muted-foreground'
                     } ${isDragSource ? 'opacity-40 scale-90' : ''} ${isDropTarget ? 'ring-2 ring-primary scale-110' : ''}`}
-                    title={seat.label}
+                    title={seat.notes ? `${seat.label} — ${seat.notes}` : seat.label}
                   >
                     {seat.filled ? seat.initials : ''}
                   </div>
@@ -292,15 +355,22 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
               key={guest.id}
               className="flex items-center justify-between bg-secondary/50 rounded px-2.5 py-1.5 group"
             >
-              <span className="text-xs font-body text-foreground truncate">
-                {guest.name}
-                {guest.plusOne && (
-                  <span className="text-cream-muted"> + {guest.plusOne}</span>
+              <div className="min-w-0">
+                <span className="text-xs font-body text-foreground truncate block">
+                  {guest.name}
+                  {guest.plusOne && (
+                    <span className="text-cream-muted"> + {guest.plusOne}</span>
+                  )}
+                </span>
+                {guest.notes && (
+                  <span className="text-[10px] text-muted-foreground truncate block">
+                    📝 {guest.notes}
+                  </span>
                 )}
-              </span>
+              </div>
               <button
                 onClick={() => onUnassignGuest(guest.id)}
-                className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 text-xs transition-all ml-2"
+                className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 text-xs transition-all ml-2 flex-shrink-0"
                 title="Remove from table"
               >
                 ↩
