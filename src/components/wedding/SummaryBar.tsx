@@ -1,4 +1,4 @@
-import { Guest, DIETARY_LABELS } from '@/types/wedding';
+import { Guest } from '@/types/wedding';
 
 interface SummaryBarProps {
   totalGuests: number;
@@ -18,11 +18,15 @@ export function SummaryBar({ totalGuests, totalHeadcount, confirmed, unassigned,
     { label: 'Tables', value: tablesCount, sub: `${fullTables} full` },
   ];
 
-  // Dietary tally (excluding 'none')
   const safeGuests = guests || [];
-  const dietaryCounts = (['vegetarian', 'vegan', 'gluten-free'] as const)
-    .map(d => ({ label: DIETARY_LABELS[d], count: safeGuests.filter(g => g.dietary === d).length }))
-    .filter(d => d.count > 0);
+  const mealCounts = Object.entries(
+    safeGuests.reduce<Record<string, number>>((acc, g) => {
+      if (g.meal) {
+        acc[g.meal] = (acc[g.meal] || 0) + 1;
+      }
+      return acc;
+    }, {})
+  );
 
   return (
     <div className="space-y-3">
@@ -45,12 +49,12 @@ export function SummaryBar({ totalGuests, totalHeadcount, confirmed, unassigned,
         ))}
       </div>
 
-      {dietaryCounts.length > 0 && (
+      {mealCounts.length > 0 && (
         <div className="bg-card rounded-lg px-4 py-3 border border-border animate-fade-in flex items-center gap-4 flex-wrap">
           <span className="text-xs uppercase tracking-widest text-muted-foreground font-body">Meal counts</span>
-          {dietaryCounts.map(d => (
-            <span key={d.label} className="text-sm font-body text-foreground">
-              {d.label}: <span className="font-semibold text-primary">{d.count}</span>
+          {mealCounts.map(([label, count]) => (
+            <span key={label} className="text-sm font-body text-foreground">
+              {label}: <span className="font-semibold text-primary">{count}</span>
             </span>
           ))}
         </div>

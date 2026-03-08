@@ -7,13 +7,14 @@ import { GuestList } from '@/components/wedding/GuestList';
 import { TableForm } from '@/components/wedding/TableForm';
 import { TableCard } from '@/components/wedding/TableCard';
 import { ExportPdf } from '@/components/wedding/ExportPdf';
+import { MealOptionsEditor } from '@/components/wedding/MealOptionsEditor';
 
 const Index = () => {
   const {
-    guests, tables,
+    guests, tables, mealOptions,
     addGuest, addGuestsBulk, removeGuest, updateGuest,
     assignGuestToTable, addTable, removeTable, updateTable, swapSeats,
-    getTableGuests, getSeatsUsed, updateTablePosition,
+    getTableGuests, getSeatsUsed, updateTablePosition, updateMealOptions,
     unassignedGuests, confirmedGuests,
     totalHeadcount, fullTables,
   } = useWeddingData();
@@ -22,13 +23,11 @@ const Index = () => {
   const [roomExpanded, setRoomExpanded] = useState(false);
   const roomRef = useRef<HTMLDivElement>(null);
 
-  // Calculate room size based on table positions
   const roomWidth = Math.max(800, ...tables.map(t => t.position.x + 280));
   const roomHeight = Math.max(400, ...tables.map(t => t.position.y + 300));
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-5 md:py-6">
           <div className="text-center">
@@ -43,7 +42,6 @@ const Index = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 md:py-8 space-y-6">
-        {/* Summary */}
         <SummaryBar
           totalGuests={guests.length}
           totalHeadcount={totalHeadcount}
@@ -54,31 +52,29 @@ const Index = () => {
           guests={guests}
         />
 
-        {/* Forms row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="space-y-3">
-            <GuestForm onAdd={addGuest} />
-            <GuestImport onImport={addGuestsBulk} />
+            <GuestForm onAdd={addGuest} mealOptions={mealOptions} />
+            <GuestImport onImport={addGuestsBulk} mealOptions={mealOptions} />
           </div>
           <div className="space-y-3">
+            <MealOptionsEditor options={mealOptions} onUpdate={updateMealOptions} />
             <TableForm onAdd={addTable} />
             <ExportPdf tables={tables} guests={guests} getTableGuests={getTableGuests} getSeatsUsed={getSeatsUsed} />
           </div>
         </div>
 
-        {/* Main content: guests + tables */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Guest list sidebar */}
           <div className="lg:col-span-1">
             <GuestList
               guests={unassignedGuests}
+              mealOptions={mealOptions}
               onRemove={removeGuest}
               onUpdate={updateGuest}
               onDragStart={setDraggingId}
             />
           </div>
 
-          {/* Room layout */}
           <div className={roomExpanded ? 'fixed inset-0 z-50 bg-background flex flex-col' : 'lg:col-span-2'}>
             <div className={`flex items-center justify-between ${roomExpanded ? 'px-6 py-4 border-b border-border' : 'mb-4'}`}>
               <div>
@@ -138,7 +134,6 @@ const Index = () => {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-border mt-12 py-6 text-center">
         <p className="text-xs text-muted-foreground font-body">
           Your seating plan is saved automatically in your browser ✦

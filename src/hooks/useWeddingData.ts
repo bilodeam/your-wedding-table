@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Guest, Table, WeddingData } from '@/types/wedding';
+import { Guest, Table, WeddingData, DEFAULT_MEAL_OPTIONS } from '@/types/wedding';
 
 const STORAGE_KEY = 'wedding-seating-data';
 
@@ -8,9 +8,31 @@ const generateId = () => Math.random().toString(36).substring(2, 10);
 const loadData = (): WeddingData => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Migration: rename dietary → meal
+      if (parsed.guests) {
+        parsed.guests = parsed.guests.map((g: any) => {
+          if ('dietary' in g && !('meal' in g)) {
+            const { dietary, ...rest } = g;
+            const mealMap: Record<string, string> = {
+              none: '',
+              vegetarian: 'Vegetarian',
+              vegan: 'Vegan',
+              'gluten-free': 'Gluten Free',
+            };
+            return { ...rest, meal: mealMap[dietary] || '' };
+          }
+          return g;
+        });
+      }
+      if (!parsed.mealOptions) {
+        parsed.mealOptions = DEFAULT_MEAL_OPTIONS;
+      }
+      return parsed;
+    }
   } catch {}
-  return { guests: [], tables: [] };
+  return { guests: [], tables: [], mealOptions: [...DEFAULT_MEAL_OPTIONS] };
 };
 
 const saveData = (data: WeddingData) => {
@@ -20,16 +42,18 @@ const saveData = (data: WeddingData) => {
 export function useWeddingData() {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
+  const [mealOptions, setMealOptions] = useState<string[]>([...DEFAULT_MEAL_OPTIONS]);
 
   useEffect(() => {
     const data = loadData();
     setGuests(data.guests);
     setTables(data.tables);
+    setMealOptions(data.mealOptions);
   }, []);
 
   useEffect(() => {
-    saveData({ guests, tables });
-  }, [guests, tables]);
+    saveData({ guests, tables, mealOptions });
+  }, [guests, tables, mealOptions]);
 
   const addGuest = useCallback((guest: Omit<Guest, 'id' | 'tableId'>) => {
     setGuests(prev => [...prev, { ...guest, id: generateId(), tableId: null }]);
@@ -78,7 +102,6 @@ export function useWeddingData() {
         return { ...t, seatOrder: newOrder };
       }));
     } else {
-      // Remove from old table's seatOrder
       setTables(prev => prev.map(t => ({
         ...t,
         seatOrder: t.seatOrder.filter(s => s !== guestId && s !== `${guestId}:plus`),
@@ -112,7 +135,6 @@ export function useWeddingData() {
     setTables(prev => {
       let updated = prev.map(t => t.id === id ? { ...t, position } : t);
       
-      // Resolve collisions iteratively
       let changed = true;
       let iterations = 0;
       while (changed && iterations < 20) {
@@ -128,7 +150,6 @@ export function useWeddingData() {
           
           if (overlapX > 0 && overlapY > 0) {
             changed = true;
-            // Push in the direction of least overlap
             if (overlapX < overlapY) {
               const dir = t.position.x >= movedTable.position.x ? 1 : -1;
               return { ...t, position: { x: Math.max(0, t.position.x + dir * overlapX), y: t.position.y } };
@@ -163,16 +184,20 @@ export function useWeddingData() {
     return tableGuests.reduce((acc, g) => acc + 1 + (g.plusOne ? 1 : 0), 0);
   }, [guests]);
 
+  const updateMealOptions = useCallback((options: string[]) => {
+    setMealOptions(options);
+  }, []);
+
   const unassignedGuests = guests.filter(g => g.tableId === null);
   const confirmedGuests = guests.filter(g => g.rsvp === 'confirmed');
   const totalHeadcount = guests.reduce((acc, g) => acc + 1 + (g.plusOne ? 1 : 0), 0);
   const fullTables = tables.filter(t => getSeatsUsed(t.id) >= t.capacity).length;
 
   return {
-    guests, tables,
+    guests, tables, mealOptions,
     addGuest, addGuestsBulk, removeGuest, updateGuest,
     assignGuestToTable, addTable, removeTable, updateTable, swapSeats,
-    getTableGuests, getSeatsUsed, updateTablePosition,
+    getTableGuests, getSeatsUsed, updateTablePosition, updateMealOptions,
     unassignedGuests, confirmedGuests,
     totalHeadcount, fullTables,
   };

@@ -2,7 +2,7 @@ export interface Guest {
   id: string;
   name: string;
   plusOne: string;
-  dietary: 'none' | 'vegetarian' | 'vegan' | 'gluten-free';
+  meal: string; // empty string = no preference, otherwise a custom meal option
   rsvp: 'confirmed' | 'pending' | 'declined';
   tableId: string | null;
 }
@@ -16,17 +16,13 @@ export interface Table {
   seatOrder: string[]; // guestId or guestId:plus
 }
 
+export const DEFAULT_MEAL_OPTIONS = ['Vegetarian', 'Vegan', 'Gluten Free'];
+
 export interface WeddingData {
   guests: Guest[];
   tables: Table[];
+  mealOptions: string[];
 }
-
-export const DIETARY_LABELS: Record<Guest['dietary'], string> = {
-  none: 'No restrictions',
-  vegetarian: 'Vegetarian',
-  vegan: 'Vegan',
-  'gluten-free': 'Gluten Free',
-};
 
 export const RSVP_LABELS: Record<Guest['rsvp'], string> = {
   confirmed: 'Confirmed',

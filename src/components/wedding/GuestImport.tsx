@@ -6,9 +6,10 @@ import { toast } from 'sonner';
 
 interface GuestImportProps {
   onImport: (guests: Omit<Guest, 'id' | 'tableId'>[]) => void;
+  mealOptions: string[];
 }
 
-export function GuestImport({ onImport }: GuestImportProps) {
+export function GuestImport({ onImport, mealOptions }: GuestImportProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,7 +29,6 @@ export function GuestImport({ onImport }: GuestImportProps) {
 
       const guests: Omit<Guest, 'id' | 'tableId'>[] = rows
         .map(row => {
-          // Flexible column matching (case-insensitive, partial match)
           const get = (keys: string[]) => {
             const found = Object.keys(row).find(k =>
               keys.some(key => k.toLowerCase().trim().includes(key))
@@ -40,19 +40,21 @@ export function GuestImport({ onImport }: GuestImportProps) {
           if (!name) return null;
 
           const plusOne = get(['plus', 'companion', 'partner', '+1']);
-          const dietaryRaw = get(['diet', 'food', 'restriction', 'allerg']).toLowerCase();
+          const mealRaw = get(['meal', 'diet', 'food', 'restriction', 'allerg']).trim();
           const rsvpRaw = get(['rsvp', 'status', 'confirm', 'response']).toLowerCase();
 
-          let dietary: Guest['dietary'] = 'none';
-          if (dietaryRaw.includes('vegan')) dietary = 'vegan';
-          else if (dietaryRaw.includes('vegetar')) dietary = 'vegetarian';
-          else if (dietaryRaw.includes('gluten')) dietary = 'gluten-free';
+          // Match meal to existing options (case-insensitive)
+          let meal = '';
+          if (mealRaw) {
+            const match = mealOptions.find(o => o.toLowerCase() === mealRaw.toLowerCase());
+            meal = match || mealRaw; // keep raw value if no match
+          }
 
           let rsvp: Guest['rsvp'] = 'pending';
           if (rsvpRaw.includes('confirm') || rsvpRaw.includes('yes')) rsvp = 'confirmed';
           else if (rsvpRaw.includes('declin') || rsvpRaw.includes('no')) rsvp = 'declined';
 
-          return { name, plusOne, dietary, rsvp };
+          return { name, plusOne, meal, rsvp };
         })
         .filter(Boolean) as Omit<Guest, 'id' | 'tableId'>[];
 
@@ -67,7 +69,6 @@ export function GuestImport({ onImport }: GuestImportProps) {
       toast.error('Could not read the file. Please try a .xlsx, .xls, or .csv file.');
     }
 
-    // Reset input so same file can be re-imported
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -91,7 +92,7 @@ export function GuestImport({ onImport }: GuestImportProps) {
       </button>
       <div className="flex items-center gap-2 mt-1.5">
         <p className="text-[10px] text-muted-foreground font-body">
-          Columns: Name, Plus One, Dietary, RSVP
+          Columns: Name, Plus One, Meal, RSVP
         </p>
         <span className="text-[10px] text-muted-foreground">·</span>
         <SampleDownload />

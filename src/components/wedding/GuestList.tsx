@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Guest, DIETARY_LABELS, RSVP_LABELS } from '@/types/wedding';
+import { Guest, RSVP_LABELS } from '@/types/wedding';
 
 interface GuestListProps {
   guests: Guest[];
+  mealOptions: string[];
   onRemove: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Guest>) => void;
   onDragStart: (guestId: string) => void;
@@ -14,22 +15,21 @@ const rsvpColors: Record<Guest['rsvp'], string> = {
   declined: 'bg-destructive/20 text-destructive',
 };
 
-const dietaryIcon: Record<Guest['dietary'], string> = {
-  none: '',
-  vegetarian: '🌿',
-  vegan: '🌱',
-  'gluten-free': '🌾',
+const mealIcons: Record<string, string> = {
+  Vegetarian: '🌿',
+  Vegan: '🌱',
+  'Gluten Free': '🌾',
 };
 
-export function GuestList({ guests, onRemove, onUpdate, onDragStart }: GuestListProps) {
+export function GuestList({ guests, mealOptions, onRemove, onUpdate, onDragStart }: GuestListProps) {
   const [search, setSearch] = useState('');
   const [filterRsvp, setFilterRsvp] = useState<Guest['rsvp'] | 'all'>('all');
-  const [filterDietary, setFilterDietary] = useState<Guest['dietary'] | 'all'>('all');
+  const [filterMeal, setFilterMeal] = useState<string>('all');
 
   const filtered = guests.filter(g => {
     if (search && !g.name.toLowerCase().includes(search.toLowerCase()) && !(g.plusOne && g.plusOne.toLowerCase().includes(search.toLowerCase()))) return false;
     if (filterRsvp !== 'all' && g.rsvp !== filterRsvp) return false;
-    if (filterDietary !== 'all' && g.dietary !== filterDietary) return false;
+    if (filterMeal !== 'all' && g.meal !== filterMeal) return false;
     return true;
   });
 
@@ -67,12 +67,12 @@ export function GuestList({ guests, onRemove, onUpdate, onDragStart }: GuestList
             <option value="pending">Pending</option>
             <option value="declined">Declined</option>
           </select>
-          <select value={filterDietary} onChange={e => setFilterDietary(e.target.value as any)} className={selectClass}>
-            <option value="all">All Dietary</option>
-            <option value="none">No restrictions</option>
-            <option value="vegetarian">Vegetarian</option>
-            <option value="vegan">Vegan</option>
-            <option value="gluten-free">Gluten Free</option>
+          <select value={filterMeal} onChange={e => setFilterMeal(e.target.value)} className={selectClass}>
+            <option value="all">All Meals</option>
+            <option value="">No preference</option>
+            {mealOptions.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -100,8 +100,11 @@ export function GuestList({ guests, onRemove, onUpdate, onDragStart }: GuestList
                     {guest.plusOne && (
                       <span className="text-cream-muted font-normal"> + {guest.plusOne}</span>
                     )}
-                    {dietaryIcon[guest.dietary] && (
-                      <span className="ml-1.5">{dietaryIcon[guest.dietary]}</span>
+                    {guest.meal && mealIcons[guest.meal] && (
+                      <span className="ml-1.5">{mealIcons[guest.meal]}</span>
+                    )}
+                    {guest.meal && !mealIcons[guest.meal] && (
+                      <span className="ml-1.5 text-xs text-muted-foreground">({guest.meal})</span>
                     )}
                   </p>
                 </div>

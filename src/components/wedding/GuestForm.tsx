@@ -3,21 +3,22 @@ import { Guest } from '@/types/wedding';
 
 interface GuestFormProps {
   onAdd: (guest: Omit<Guest, 'id' | 'tableId'>) => void;
+  mealOptions: string[];
 }
 
-export function GuestForm({ onAdd }: GuestFormProps) {
+export function GuestForm({ onAdd, mealOptions }: GuestFormProps) {
   const [name, setName] = useState('');
   const [plusOne, setPlusOne] = useState('');
-  const [dietary, setDietary] = useState<Guest['dietary']>('none');
+  const [meal, setMeal] = useState('');
   const [rsvp, setRsvp] = useState<Guest['rsvp']>('pending');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onAdd({ name: name.trim(), plusOne: plusOne.trim(), dietary, rsvp });
+    onAdd({ name: name.trim(), plusOne: plusOne.trim(), meal, rsvp });
     setName('');
     setPlusOne('');
-    setDietary('none');
+    setMeal('');
     setRsvp('pending');
   };
 
@@ -52,12 +53,12 @@ export function GuestForm({ onAdd }: GuestFormProps) {
           />
         </div>
         <div>
-          <label className={labelClass}>Dietary</label>
-          <select value={dietary} onChange={e => setDietary(e.target.value as Guest['dietary'])} className={selectClass}>
-            <option value="none">No restrictions</option>
-            <option value="vegetarian">Vegetarian</option>
-            <option value="vegan">Vegan</option>
-            <option value="gluten-free">Gluten Free</option>
+          <label className={labelClass}>Meal</label>
+          <select value={meal} onChange={e => setMeal(e.target.value)} className={selectClass}>
+            <option value="">No preference</option>
+            {mealOptions.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
           </select>
         </div>
         <div>
