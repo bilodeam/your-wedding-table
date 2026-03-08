@@ -40,6 +40,7 @@ export function GuestList({ guests, mealOptions, onRemove, onUpdate, onDragStart
   const [filterMeal, setFilterMeal] = useState<string>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingState, setEditingState] = useState<EditingState | null>(null);
+  const [linkingId, setLinkingId] = useState<string | null>(null);
 
   const filtered = guests.filter(g => {
     if (
@@ -80,6 +81,25 @@ export function GuestList({ guests, mealOptions, onRemove, onUpdate, onDragStart
   const cancelEditing = () => {
     setEditingId(null);
     setEditingState(null);
+  };
+
+  const handleLinkClick = (guest: Guest) => {
+    if (!linkingId) {
+      // Start linking mode — this guest will become the primary
+      setLinkingId(guest.id);
+      return;
+    }
+    if (linkingId === guest.id) {
+      // Cancel linking
+      setLinkingId(null);
+      return;
+    }
+    // Merge: linkingId guest becomes primary, clicked guest becomes their plus-one
+    const primary = guests.find(g => g.id === linkingId);
+    if (!primary) { setLinkingId(null); return; }
+    onUpdate(linkingId, { plusOne: guest.name });
+    onRemove(guest.id);
+    setLinkingId(null);
   };
 
   if (guests.length === 0) {
@@ -225,18 +245,31 @@ export function GuestList({ guests, mealOptions, onRemove, onUpdate, onDragStart
               );
             }
 
+            const isLinkTarget = linkingId && linkingId !== guest.id && !guest.plusOne;
+            const isLinkSource = linkingId === guest.id;
+
             return (
               <div
                 key={guest.id}
-                draggable
+                draggable={!linkingId}
                 onDragStart={e => {
+                  if (linkingId) { e.preventDefault(); return; }
                   e.dataTransfer.setData('guestId', guest.id);
                   onDragStart(guest.id);
                 }}
-                className="flex items-center justify-between px-4 py-3 hover:bg-secondary/50 cursor-grab active:cursor-grabbing transition-colors group"
+                onClick={() => { if (linkingId) handleLinkClick(guest); }}
+                className={`flex items-center justify-between px-4 py-3 transition-colors group ${
+                  isLinkSource
+                    ? 'bg-primary/10 ring-1 ring-primary/40'
+                    : isLinkTarget
+                    ? 'hover:bg-primary/5 cursor-pointer'
+                    : linkingId
+                    ? 'opacity-40 cursor-not-allowed'
+                    : 'hover:bg-secondary/50 cursor-grab active:cursor-grabbing'
+                }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isLinkSource ? 'bg-primary animate-pulse' : 'bg-primary'}`} />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">
                       {guest.name}
@@ -249,7 +282,12 @@ export function GuestList({ guests, mealOptions, onRemove, onUpdate, onDragStart
                         </span>
                       )}
                     </p>
-                    {guest.notes && (
+                    {isLinkSource && (
+                      <p className="text-[11px] text-primary font-body mt-0.5">
+                        Click another guest to pair as plus-one · click again to cancel
+                      </p>
+                    )}
+                    {guest.notes && !isLinkSource && (
                       <p className="text-[11px] text-muted-foreground font-body truncate mt-0.5">
                         📝 {guest.notes}
                       </p>
@@ -260,20 +298,33 @@ export function GuestList({ guests, mealOptions, onRemove, onUpdate, onDragStart
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${rsvpColors[guest.rsvp]}`}>
                     {RSVP_LABELS[guest.rsvp]}
                   </span>
-                  <button
-                    onClick={() => startEditing(guest)}
-                    className="text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-all text-xs px-1"
-                    title="Edit guest"
-                  >
-                    ✎
-                  </button>
-                  <button
-                    onClick={() => onRemove(guest.id)}
-                    className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all text-sm px-1"
-                    title="Remove guest"
-                  >
-                    ✕
-                  </button>
+                  {!linkingId && !guest.plusOne && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleLinkClick(guest); }}
+                      className="text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-all text-xs px-1"
+                      title="Link as plus-one pair"
+                    >
+                      🔗
+                    </button>
+                  )}
+                  {!linkingId && (
+                    <>
+                      <button
+                        onClick={() => startEditing(guest)}
+                        className="text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-all text-xs px-1"
+                        title="Edit guest"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        onClick={() => onRemove(guest.id)}
+                        className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all text-sm px-1"
+                        title="Remove guest"
+                      >
+                        ✕
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             );
