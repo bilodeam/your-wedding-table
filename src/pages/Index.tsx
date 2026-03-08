@@ -19,6 +19,7 @@ const Index = () => {
   } = useWeddingData();
 
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [roomExpanded, setRoomExpanded] = useState(false);
   const roomRef = useRef<HTMLDivElement>(null);
 
   // Calculate room size based on table positions
@@ -75,18 +76,26 @@ const Index = () => {
           </div>
 
           {/* Room layout */}
-          <div className="lg:col-span-2">
-            <div className="mb-4">
-              <h2 className="font-display text-xl font-semibold text-foreground">
-                Room Layout
-              </h2>
-              <p className="text-xs text-muted-foreground font-body mt-1">
-                Drag guests onto tables · Drag tables to rearrange the room
-              </p>
+          <div className={roomExpanded ? 'fixed inset-0 z-50 bg-background flex flex-col' : 'lg:col-span-2'}>
+            <div className={`flex items-center justify-between ${roomExpanded ? 'px-6 py-4 border-b border-border' : 'mb-4'}`}>
+              <div>
+                <h2 className="font-display text-xl font-semibold text-foreground">
+                  Room Layout
+                </h2>
+                <p className="text-xs text-muted-foreground font-body mt-1">
+                  Drag guests onto tables · Drag tables to rearrange the room
+                </p>
+              </div>
+              <button
+                onClick={() => setRoomExpanded(!roomExpanded)}
+                className="text-xs font-body text-primary hover:text-primary/80 border border-primary/30 rounded px-3 py-1.5 transition-colors"
+              >
+                {roomExpanded ? '✕ Close' : '⤢ Expand'}
+              </button>
             </div>
 
             {tables.length === 0 ? (
-              <div className="bg-card border border-dashed border-border rounded-lg p-12 text-center animate-fade-in">
+              <div className={`bg-card border border-dashed border-border rounded-lg p-12 text-center animate-fade-in ${roomExpanded ? 'mx-6' : ''}`}>
                 <p className="text-muted-foreground font-body">No tables yet.</p>
                 <p className="text-muted-foreground font-body text-sm mt-1">
                   Create your first table above to get started.
@@ -95,8 +104,8 @@ const Index = () => {
             ) : (
               <div
                 ref={roomRef}
-                className="relative bg-card/30 border border-border rounded-lg overflow-auto"
-                style={{ minHeight: roomHeight, minWidth: 0 }}
+                className={`relative bg-card/30 border border-border rounded-lg overflow-auto ${roomExpanded ? 'flex-1 mx-6 mb-6' : ''}`}
+                style={{ minHeight: roomExpanded ? undefined : roomHeight, minWidth: 0 }}
               >
                 <div className="relative" style={{ width: roomWidth, height: roomHeight }}>
                   {tables.map(table => (
