@@ -27,6 +27,8 @@ function getInitials(name: string): string {
 export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGuest, onRemoveTable, onUpdateTable, onPositionChange, onSwapSeats, containerRef }: TableCardProps) {
   const [editingCapacity, setEditingCapacity] = useState(false);
   const [capacityValue, setCapacityValue] = useState(String(table.capacity));
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(table.name);
   const fillRatio = seatsUsed / table.capacity;
   const statusColor = fillRatio >= 1
     ? 'border-success/60 bg-success/5'
@@ -119,7 +121,33 @@ export function TableCard({ table, guests, seatsUsed, onDropGuest, onUnassignGue
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${statusDot}`} />
-          <h4 className="font-display text-base font-semibold text-foreground">{table.name}</h4>
+          {editingName ? (
+            <input
+              autoFocus
+              type="text"
+              value={nameValue}
+              onChange={(e) => setNameValue(e.target.value)}
+              onBlur={() => {
+                const val = nameValue.trim() || table.name;
+                onUpdateTable(table.id, { name: val });
+                setNameValue(val);
+                setEditingName(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                if (e.key === 'Escape') { setNameValue(table.name); setEditingName(false); }
+              }}
+              className="w-24 h-6 text-sm bg-secondary border border-border rounded px-1.5 font-display font-semibold text-foreground"
+            />
+          ) : (
+            <h4
+              onClick={() => { setNameValue(table.name); setEditingName(true); }}
+              className="font-display text-base font-semibold text-foreground cursor-text hover:text-primary/80 transition-colors"
+              title="Click to rename"
+            >
+              {table.name}
+            </h4>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {editingCapacity ? (
