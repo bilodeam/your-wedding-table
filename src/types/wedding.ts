@@ -5,6 +5,7 @@ export interface Guest {
   meal: string; // empty string = no preference, otherwise a custom meal option
   rsvp: 'confirmed' | 'pending' | 'declined';
   tableId: string | null;
+  notes: string; // special notes, dietary needs, accessibility, etc.
 }
 
 export interface Table {
