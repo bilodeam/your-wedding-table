@@ -70,7 +70,7 @@ export function GuestList({ guests, mealOptions, onRemove, onUpdate, onDragStart
           <select value={filterMeal} onChange={e => setFilterMeal(e.target.value)} className={selectClass}>
             <option value="all">All Meals</option>
             <option value="">No preference</option>
-            {mealOptions.map(opt => (
+            {(mealOptions || []).map(opt => (
               <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
