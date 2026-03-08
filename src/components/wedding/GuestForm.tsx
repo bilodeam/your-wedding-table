@@ -4,9 +4,10 @@ import { Guest } from '@/types/wedding';
 interface GuestFormProps {
   onAdd: (guest: Omit<Guest, 'id' | 'tableId'>) => void;
   mealOptions: string[];
+  importElement?: React.ReactNode;
 }
 
-export function GuestForm({ onAdd, mealOptions }: GuestFormProps) {
+export function GuestForm({ onAdd, mealOptions, importElement }: GuestFormProps) {
   const [name, setName] = useState('');
   const [plusOne, setPlusOne] = useState('');
   const [meal, setMeal] = useState('');
@@ -70,12 +71,15 @@ export function GuestForm({ onAdd, mealOptions }: GuestFormProps) {
           </select>
         </div>
       </div>
-      <button
-        type="submit"
-        className="mt-4 w-full sm:w-auto px-6 py-2.5 bg-primary text-primary-foreground font-body font-medium text-sm rounded-md hover:opacity-90 transition-opacity"
-      >
-        Add Guest
-      </button>
+      <div className="mt-4 flex items-start gap-3 flex-wrap">
+        <button
+          type="submit"
+          className="px-6 py-2.5 bg-primary text-primary-foreground font-body font-medium text-sm rounded-md hover:opacity-90 transition-opacity"
+        >
+          Add Guest
+        </button>
+        {importElement}
+      </div>
     </form>
   );
 }
