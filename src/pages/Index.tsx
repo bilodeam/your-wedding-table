@@ -54,8 +54,11 @@ const Index = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="space-y-3">
-            <GuestForm onAdd={addGuest} mealOptions={mealOptions} />
-            <GuestImport onImport={addGuestsBulk} mealOptions={mealOptions} />
+            <GuestForm
+              onAdd={addGuest}
+              mealOptions={mealOptions}
+              importElement={<GuestImport onImport={addGuestsBulk} mealOptions={mealOptions} />}
+            />
           </div>
           <div className="space-y-3">
             <MealOptionsEditor options={mealOptions} onUpdate={updateMealOptions} />
