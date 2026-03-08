@@ -209,12 +209,12 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
     doc.text(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), pageW - margin, 35, { align: 'right' });
 
     // ─── Table cards with visual seat layout ───
-    const colCount = Math.min(tables.length, 3);
-    const gapX = 8;
-    const gapY = 10;
+    const colCount = Math.min(tables.length, 4);
+    const gapX = 5;
+    const gapY = 6;
     const colW = (pageW - margin * 2 - gapX * (colCount - 1)) / colCount;
     let currentX = margin;
-    let currentY = 44;
+    let currentY = 42;
     let rowMaxH = 0;
 
     tables.forEach((table, idx) => {
@@ -223,13 +223,13 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
       const tableGuestsFiltered = guests.filter(g => g.tableId === table.id);
       const seatData = buildSeatData(table, tableGuestsFiltered);
 
-      // Calculate card height based on visual + name list
-      const visualH = table.shape === 'round' ? 42 : 36;
-      const nameLineH = 4.5;
+      // Compact card heights
+      const visualH = table.shape === 'round' ? 30 : 26;
+      const nameLineH = 3.8;
       const filledSeats = seatData.filter(s => s.filled);
-      const nameListH = Math.max(8, filledSeats.length * nameLineH + 4);
-      const headerH = 14;
-      const cardH = headerH + visualH + nameListH + 6;
+      const nameListH = Math.max(6, filledSeats.length * nameLineH + 3);
+      const headerH = 10;
+      const cardH = headerH + visualH + nameListH + 4;
 
       // Page break check
       if (currentY + cardH > pageH - 12 && idx > 0) {
@@ -243,20 +243,18 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
 
       // Card shadow
       setColor(doc, [210, 205, 195], 'fill');
-      doc.roundedRect(currentX + 0.7, currentY + 0.7, colW, cardH, 2.5, 2.5, 'F');
+      doc.roundedRect(currentX + 0.5, currentY + 0.5, colW, cardH, 2, 2, 'F');
 
       // Card background
       setColor(doc, COLORS.cream, 'fill');
-      doc.roundedRect(currentX, currentY, colW, cardH, 2.5, 2.5, 'F');
-
-      // Card border
+      doc.roundedRect(currentX, currentY, colW, cardH, 2, 2, 'F');
       setColor(doc, isFull ? COLORS.sage : COLORS.border, 'draw');
-      doc.setLineWidth(isFull ? 0.5 : 0.3);
-      doc.roundedRect(currentX, currentY, colW, cardH, 2.5, 2.5, 'S');
+      doc.setLineWidth(isFull ? 0.4 : 0.2);
+      doc.roundedRect(currentX, currentY, colW, cardH, 2, 2, 'S');
 
-      // Status dot
-      const dotX = currentX + 6;
-      const dotY = currentY + 7;
+      // Status dot + Table name on one line, compact
+      const dotX = currentX + 4;
+      const dotY = currentY + 5.5;
       if (isFull) {
         setColor(doc, COLORS.sage, 'fill');
       } else if (seatsUsed / table.capacity >= 0.7) {
@@ -264,74 +262,60 @@ export function ExportPdf({ tables, guests, getTableGuests, getSeatsUsed }: Expo
       } else {
         setColor(doc, COLORS.warmGray, 'fill');
       }
-      doc.circle(dotX, dotY, 1.3, 'F');
+      doc.circle(dotX, dotY, 1, 'F');
 
       // Table name
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
+      doc.setFontSize(8);
       setColor(doc, COLORS.charcoal);
-      doc.text(table.name, currentX + 10, currentY + 8);
+      doc.text(table.name, currentX + 7, currentY + 6.5);
 
-      // Seat count badge
+      // Seat count
       const badgeText = `${seatsUsed}/${table.capacity}`;
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      const badgeW = doc.getTextWidth(badgeText) + 5;
-      const badgeX = currentX + colW - badgeW - 4;
-      const badgeY2 = currentY + 3.5;
-      setColor(doc, isFull ? COLORS.sageLight : [240, 237, 230], 'fill');
-      doc.roundedRect(badgeX, badgeY2, badgeW, 5.5, 1.5, 1.5, 'F');
+      doc.setFontSize(6);
       setColor(doc, isFull ? COLORS.sage : COLORS.warmGray);
-      doc.text(badgeText, badgeX + badgeW / 2, badgeY2 + 4, { align: 'center' });
+      doc.text(badgeText, currentX + colW - 4, currentY + 6.5, { align: 'right' });
 
       // ─── Visual seat layout ───
       const vizCx = currentX + colW / 2;
-      const vizCy = currentY + headerH + visualH / 2 + 2;
+      const vizCy = currentY + headerH + visualH / 2;
 
       if (table.shape === 'round') {
-        const radius = Math.min(12, (colW - 30) / 2 * 0.4);
+        const radius = Math.min(8, (colW - 24) / 2 * 0.4);
         drawRoundTable(doc, vizCx, vizCy, radius, seatData);
       } else {
-        const tw = Math.min(colW - 30, 50);
-        const th = 10;
+        const tw = Math.min(colW - 24, 40);
+        const th = 7;
         drawRectTable(doc, vizCx, vizCy, tw, th, seatData);
       }
 
-      // ─── Divider ───
-      const divY = currentY + headerH + visualH + 2;
+      // Divider
+      const divY = currentY + headerH + visualH + 1;
       setColor(doc, COLORS.border, 'draw');
-      doc.setLineWidth(0.15);
-      doc.line(currentX + 5, divY, currentX + colW - 5, divY);
+      doc.setLineWidth(0.1);
+      doc.line(currentX + 3, divY, currentX + colW - 3, divY);
 
       // ─── Name list below ───
-      const listStartY = divY + 4;
+      const listStartY = divY + 2;
       if (filledSeats.length === 0) {
         doc.setFont('helvetica', 'italic');
-        doc.setFontSize(7);
+        doc.setFontSize(6);
         setColor(doc, [180, 175, 165]);
-        doc.text('No guests assigned', currentX + colW / 2, listStartY + 3, { align: 'center' });
+        doc.text('Empty', currentX + colW / 2, listStartY + 3, { align: 'center' });
       } else {
         filledSeats.forEach((seat, i) => {
           const ly = listStartY + i * nameLineH + 2;
-
-          // Seat number
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(6);
-          setColor(doc, COLORS.sage);
-          doc.text(`${i + 1}.`, currentX + 6, ly);
-
-          // Name
           doc.setFont('helvetica', seat.isPlus ? 'italic' : 'normal');
-          doc.setFontSize(7.5);
+          doc.setFontSize(6.5);
           setColor(doc, COLORS.charcoal);
-          doc.text(seat.name, currentX + 12, ly);
+          doc.text(`${i + 1}. ${seat.name}`, currentX + 4, ly);
 
-          // Dietary
           if (seat.dietary) {
             doc.setFont('helvetica', 'normal');
-            doc.setFontSize(5);
+            doc.setFontSize(4.5);
             setColor(doc, COLORS.sage);
-            doc.text(seat.dietary, currentX + colW - 5, ly, { align: 'right' });
+            doc.text(seat.dietary, currentX + colW - 4, ly, { align: 'right' });
           }
         });
       }
