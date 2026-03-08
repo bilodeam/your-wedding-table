@@ -56,7 +56,7 @@ export function GuestForm({ onAdd, mealOptions }: GuestFormProps) {
           <label className={labelClass}>Meal</label>
           <select value={meal} onChange={e => setMeal(e.target.value)} className={selectClass}>
             <option value="">No preference</option>
-            {mealOptions.map(opt => (
+            {(mealOptions || []).map(opt => (
               <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
