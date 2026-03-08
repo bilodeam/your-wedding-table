@@ -23,6 +23,10 @@ const loadData = (): WeddingData => {
             };
             return { ...rest, meal: mealMap[dietary] || '' };
           }
+          // Migration: add notes field if missing
+          if (!('notes' in g)) {
+            return { ...g, notes: '' };
+          }
           return g;
         });
       }
@@ -60,71 +64,100 @@ export function useWeddingData() {
   }, []);
 
   const addGuestsBulk = useCallback((newGuests: Omit<Guest, 'id' | 'tableId'>[]) => {
-    setGuests(prev => [...prev, ...newGuests.map(g => ({ ...g, id: generateId(), tableId: null }))]);
+    setGuests(prev => [
+      ...prev,
+      ...newGuests.map(g => ({ ...g, id: generateId(), tableId: null, notes: g.notes || '' })),
+    ]);
   }, []);
 
   const removeGuest = useCallback((id: string) => {
     setGuests(prev => prev.filter(g => g.id !== id));
+    // Also clean up seatOrder on any table
+    setTables(prev =>
+      prev.map(t => ({
+        ...t,
+        seatOrder: t.seatOrder.filter(s => s !== id && s !== `${id}:plus`),
+      }))
+    );
   }, []);
 
   const updateGuest = useCallback((id: string, updates: Partial<Guest>) => {
-    setGuests(prev => prev.map(g => g.id === id ? { ...g, ...updates } : g));
+    setGuests(prev => prev.map(g => (g.id === id ? { ...g, ...updates } : g)));
   }, []);
 
+  // FIX: Rewritten to avoid stale closure — all logic uses latest state via functional updaters
   const assignGuestToTable = useCallback((guestId: string, tableId: string | null) => {
-    setGuests(prev => {
-      const guest = prev.find(g => g.id === guestId);
-      if (!guest) return prev;
+    setGuests(prevGuests => {
+      const guest = prevGuests.find(g => g.id === guestId);
+      if (!guest) return prevGuests;
 
       if (tableId !== null) {
-        const table = tables.find(t => t.id === tableId);
-        if (!table) return prev;
-        const currentCount = prev.filter(g => g.tableId === tableId).length;
-        const plusOnes = prev.filter(g => g.tableId === tableId && g.plusOne).length;
-        const guestPlusOne = guest.plusOne && guest.tableId !== tableId ? 1 : 0;
-        const seatsNeeded = 1 + guestPlusOne;
-        const seatsUsed = currentCount + plusOnes - (guest.tableId === tableId ? (1 + (guest.plusOne ? 1 : 0)) : 0);
-        if (seatsUsed + seatsNeeded > table.capacity) return prev;
+        // FIX: Correct seat counting using functional updater (no stale state)
+        setTables(prevTables => {
+          const table = prevTables.find(t => t.id === tableId);
+          if (!table) return prevTables;
+
+          // Count seats currently used at target table, excluding this guest if already assigned there
+          const seatsUsed = prevGuests
+            .filter(g => g.tableId === tableId && g.id !== guestId)
+            .reduce((acc, g) => acc + 1 + (g.plusOne ? 1 : 0), 0);
+
+          const seatsNeeded = 1 + (guest.plusOne ? 1 : 0);
+
+          if (seatsUsed + seatsNeeded > table.capacity) return prevTables;
+
+          return prevTables.map(t => {
+            if (t.id !== tableId) return t;
+            const newOrder = t.seatOrder.filter(s => s !== guestId && s !== `${guestId}:plus`);
+            newOrder.push(guestId);
+            if (guest.plusOne) newOrder.push(`${guestId}:plus`);
+            return { ...t, seatOrder: newOrder };
+          });
+        });
+
+        return prevGuests.map(g => (g.id === guestId ? { ...g, tableId } : g));
+      } else {
+        // Unassigning
+        setTables(prevTables =>
+          prevTables.map(t => ({
+            ...t,
+            seatOrder: t.seatOrder.filter(s => s !== guestId && s !== `${guestId}:plus`),
+          }))
+        );
+        return prevGuests.map(g => (g.id === guestId ? { ...g, tableId: null } : g));
       }
-
-      return prev.map(g => g.id === guestId ? { ...g, tableId } : g);
     });
-
-    // Update seatOrder
-    if (tableId !== null) {
-      setTables(prev => prev.map(t => {
-        if (t.id !== tableId) return t;
-        const guest = guests.find(g => g.id === guestId);
-        if (!guest) return t;
-        const newOrder = t.seatOrder.filter(s => s !== guestId && s !== `${guestId}:plus`);
-        newOrder.push(guestId);
-        if (guest.plusOne) newOrder.push(`${guestId}:plus`);
-        return { ...t, seatOrder: newOrder };
-      }));
-    } else {
-      setTables(prev => prev.map(t => ({
-        ...t,
-        seatOrder: t.seatOrder.filter(s => s !== guestId && s !== `${guestId}:plus`),
-      })));
-    }
-  }, [tables, guests]);
+  }, []);
 
   const addTable = useCallback((name: string, capacity: number, shape: 'round' | 'rectangular' = 'round') => {
     setTables(prev => {
       const col = prev.length % 3;
       const row = Math.floor(prev.length / 3);
-      return [...prev, { id: generateId(), name, capacity, shape, position: { x: col * 280 + 20, y: row * 280 + 20 }, seatOrder: [] }];
+      return [
+        ...prev,
+        {
+          id: generateId(),
+          name,
+          capacity,
+          shape,
+          position: { x: col * 280 + 20, y: row * 280 + 20 },
+          seatOrder: [],
+        },
+      ];
     });
   }, []);
 
   const swapSeats = useCallback((tableId: string, fromIndex: number, toIndex: number) => {
-    setTables(prev => prev.map(t => {
-      if (t.id !== tableId) return t;
-      const order = [...t.seatOrder];
-      if (fromIndex < 0 || toIndex < 0 || fromIndex >= order.length || toIndex >= order.length) return t;
-      [order[fromIndex], order[toIndex]] = [order[toIndex], order[fromIndex]];
-      return { ...t, seatOrder: order };
-    }));
+    setTables(prev =>
+      prev.map(t => {
+        if (t.id !== tableId) return t;
+        const order = [...t.seatOrder];
+        if (fromIndex < 0 || toIndex < 0 || fromIndex >= order.length || toIndex >= order.length)
+          return t;
+        [order[fromIndex], order[toIndex]] = [order[toIndex], order[fromIndex]];
+        return { ...t, seatOrder: order };
+      })
+    );
   }, []);
 
   const updateTablePosition = useCallback((id: string, position: { x: number; y: number }) => {
@@ -133,21 +166,19 @@ export function useWeddingData() {
     const PAD = 12;
 
     setTables(prev => {
-      let updated = prev.map(t => t.id === id ? { ...t, position } : t);
-      
+      let updated = prev.map(t => (t.id === id ? { ...t, position } : t));
+
       let changed = true;
       let iterations = 0;
       while (changed && iterations < 20) {
         changed = false;
         iterations++;
         const movedTable = updated.find(t => t.id === id)!;
-        
+
         updated = updated.map(t => {
           if (t.id === id) return t;
-          
-          const overlapX = (TABLE_W + PAD) - Math.abs(movedTable.position.x - t.position.x);
-          const overlapY = (TABLE_H + PAD) - Math.abs(movedTable.position.y - t.position.y);
-          
+          const overlapX = TABLE_W + PAD - Math.abs(movedTable.position.x - t.position.x);
+          const overlapY = TABLE_H + PAD - Math.abs(movedTable.position.y - t.position.y);
           if (overlapX > 0 && overlapY > 0) {
             changed = true;
             if (overlapX < overlapY) {
@@ -161,28 +192,32 @@ export function useWeddingData() {
           return t;
         });
       }
-      
+
       return updated;
     });
   }, []);
 
   const updateTable = useCallback((id: string, updates: Partial<Table>) => {
-    setTables(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+    setTables(prev => prev.map(t => (t.id === id ? { ...t, ...updates } : t)));
   }, []);
 
   const removeTable = useCallback((id: string) => {
     setTables(prev => prev.filter(t => t.id !== id));
-    setGuests(prev => prev.map(g => g.tableId === id ? { ...g, tableId: null } : g));
+    setGuests(prev => prev.map(g => (g.tableId === id ? { ...g, tableId: null } : g)));
   }, []);
 
-  const getTableGuests = useCallback((tableId: string) => {
-    return guests.filter(g => g.tableId === tableId);
-  }, [guests]);
+  const getTableGuests = useCallback(
+    (tableId: string) => guests.filter(g => g.tableId === tableId),
+    [guests]
+  );
 
-  const getSeatsUsed = useCallback((tableId: string) => {
-    const tableGuests = guests.filter(g => g.tableId === tableId);
-    return tableGuests.reduce((acc, g) => acc + 1 + (g.plusOne ? 1 : 0), 0);
-  }, [guests]);
+  const getSeatsUsed = useCallback(
+    (tableId: string) => {
+      const tableGuests = guests.filter(g => g.tableId === tableId);
+      return tableGuests.reduce((acc, g) => acc + 1 + (g.plusOne ? 1 : 0), 0);
+    },
+    [guests]
+  );
 
   const updateMealOptions = useCallback((options: string[]) => {
     setMealOptions(options);
