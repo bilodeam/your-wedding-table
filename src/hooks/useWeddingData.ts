@@ -218,7 +218,18 @@ export function useWeddingData() {
   }, []);
 
   const updateTable = useCallback((id: string, updates: Partial<Table>) => {
-    setTables(prev => prev.map(t => (t.id === id ? { ...t, ...updates } : t)));
+    setTables(prev =>
+      prev.map(t => {
+        if (t.id !== id) return t;
+        const next = { ...t, ...updates };
+        if (updates.capacity !== undefined) {
+          const order = [...next.seatOrder];
+          while (order.length < updates.capacity) order.push(null);
+          next.seatOrder = order.slice(0, updates.capacity);
+        }
+        return next;
+      })
+    );
   }, []);
 
   const removeTable = useCallback((id: string) => {
