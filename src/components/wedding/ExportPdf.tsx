@@ -52,13 +52,23 @@ function buildSeatData(table: Table, guests: Guest[]): SeatInfo[] {
   const seats: SeatInfo[] = [];
 
   table.seatOrder.forEach(entry => {
+    if (!entry) {
+      seats.push({ initials: '', name: '', filled: false, meal: '', isPlus: false });
+      return;
+    }
     const isPlus = entry.endsWith(':plus');
     const guestId = isPlus ? entry.replace(':plus', '') : entry;
     const guest = guestMap.get(guestId);
-    if (!guest) return;
+    if (!guest) {
+      seats.push({ initials: '', name: '', filled: false, meal: '', isPlus: false });
+      return;
+    }
     const name = isPlus ? guest.plusOne : guest.name;
     const meal = isPlus ? '' : guest.meal;
-    if (!name) return;
+    if (!name) {
+      seats.push({ initials: '', name: '', filled: false, meal: '', isPlus: false });
+      return;
+    }
     seats.push({
       initials: getInitials(name),
       name,
