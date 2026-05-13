@@ -141,7 +141,7 @@ export function useWeddingData() {
         setTables(prevTables =>
           prevTables.map(t => ({
             ...t,
-            seatOrder: t.seatOrder.filter(s => s !== guestId && s !== `${guestId}:plus`),
+            seatOrder: t.seatOrder.map(s => (s === guestId || s === `${guestId}:plus` ? null : s)),
           }))
         );
         return prevGuests.map(g => (g.id === guestId ? { ...g, tableId: null } : g));
