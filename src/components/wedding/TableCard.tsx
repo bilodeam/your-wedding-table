@@ -14,14 +14,13 @@ interface TableCardProps {
   containerRef: React.RefObject<HTMLDivElement>;
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map(w => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+function getShortName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0];
+  const first = parts[0];
+  const lastInitial = parts[parts.length - 1][0].toUpperCase();
+  return `${first} ${lastInitial}.`;
 }
 
 export function TableCard({
