@@ -193,7 +193,7 @@ export function TableCard({
         style={style}
         title={seat.notes ? `${seat.label} — ${seat.notes}` : seat.label}
       >
-        {seat.filled ? seat.initials : ''}
+        {seat.filled ? seat.display : ''}
       </div>
     );
   };
@@ -331,7 +331,7 @@ export function TableCard({
                     } ${isDragSource ? 'opacity-40 scale-90' : ''} ${isDropTarget ? 'ring-2 ring-primary scale-110' : ''}`}
                     title={seat.notes ? `${seat.label} — ${seat.notes}` : seat.label}
                   >
-                    {seat.filled ? seat.initials : ''}
+                    {seat.filled ? seat.display : ''}
                   </div>
                 );
               })}
