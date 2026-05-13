@@ -205,7 +205,7 @@ export function TableCard({
       onDrop={handleDrop}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
-      className={`rounded-lg border-2 p-4 transition-all animate-scale-in w-[240px] select-none ${statusColor} ${
+      className={`rounded-lg border-2 p-4 transition-all animate-scale-in w-[260px] select-none ${statusColor} ${
         isDraggingTable ? 'shadow-lg shadow-primary/20 z-20' : ''
       }`}
       style={{ cursor: isDraggingTable ? 'grabbing' : 'grab', touchAction: 'none' }}
