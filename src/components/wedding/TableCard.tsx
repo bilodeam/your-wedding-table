@@ -14,14 +14,13 @@ interface TableCardProps {
   containerRef: React.RefObject<HTMLDivElement>;
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map(w => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+function getShortName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0];
+  const first = parts[0];
+  const lastInitial = parts[parts.length - 1][0].toUpperCase();
+  return `${first} ${lastInitial}.`;
 }
 
 export function TableCard({
@@ -125,7 +124,7 @@ export function TableCard({
   const guestMap = new Map(guests.map(g => [g.id, g]));
   const seatData: {
     key: string;
-    initials: string;
+    display: string;
     filled: boolean;
     label: string;
     notes?: string;
@@ -141,7 +140,7 @@ export function TableCard({
       if (guest && name) {
         seatData.push({
           key: `${entry}-${i}`,
-          initials: getInitials(name),
+          display: getShortName(name),
           filled: true,
           label: name,
           notes: !isPlus ? guest.notes : undefined,
@@ -151,7 +150,7 @@ export function TableCard({
     }
     seatData.push({
       key: `empty-${i}`,
-      initials: '',
+      display: '',
       filled: false,
       label: 'Empty seat',
     });
@@ -186,15 +185,15 @@ export function TableCard({
           setHoverSeatIndex(null);
         }}
         onDragEnd={() => { setDraggingSeatIndex(null); setHoverSeatIndex(null); }}
-        className={`absolute w-7 h-7 rounded-full border flex items-center justify-center text-[9px] font-body font-medium transition-all ${
+        className={`absolute h-6 border flex items-center justify-center text-[9px] font-body font-medium transition-all overflow-hidden px-1 ${
           seat.filled
-            ? 'bg-primary/30 border-primary/50 text-primary cursor-grab active:cursor-grabbing'
-            : 'bg-secondary border-border text-muted-foreground'
+            ? 'w-16 rounded-md bg-primary/30 border-primary/50 text-primary cursor-grab active:cursor-grabbing'
+            : 'w-6 rounded-full bg-secondary border-border text-muted-foreground'
         } ${isDragSource ? 'opacity-40 scale-90' : ''} ${isDropTarget ? 'ring-2 ring-primary scale-110' : ''} ${extraClass || ''}`}
         style={style}
         title={seat.notes ? `${seat.label} — ${seat.notes}` : seat.label}
       >
-        {seat.filled ? seat.initials : ''}
+        <span className="truncate leading-none">{seat.filled ? seat.display : ''}</span>
       </div>
     );
   };
@@ -206,7 +205,7 @@ export function TableCard({
       onDrop={handleDrop}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
-      className={`rounded-lg border-2 p-4 transition-all animate-scale-in w-[240px] select-none ${statusColor} ${
+      className={`rounded-lg border-2 p-4 transition-all animate-scale-in w-[260px] select-none ${statusColor} ${
         isDraggingTable ? 'shadow-lg shadow-primary/20 z-20' : ''
       }`}
       style={{ cursor: isDraggingTable ? 'grabbing' : 'grab', touchAction: 'none' }}
@@ -284,14 +283,15 @@ export function TableCard({
 
       {/* Seat visualization */}
       {isRound ? (
-        <div className="relative w-[140px] h-[140px] mx-auto mb-3">
-          <div className="absolute inset-[25px] rounded-full border-2 border-border bg-secondary/30" />
+        <div className="relative w-[200px] h-[200px] mx-auto mb-3">
+          <div className="absolute inset-[35px] rounded-full border-2 border-border bg-secondary/30" />
           {seatData.map((seat, i) => {
             const angle = (i / table.capacity) * 360 - 90;
             const rad = (angle * Math.PI) / 180;
-            const cx = 70 + 55 * Math.cos(rad);
-            const cy = 70 + 55 * Math.sin(rad);
-            return seatEl(seat, i, { left: cx - 14, top: cy - 14 });
+            const cx = 100 + 78 * Math.cos(rad);
+            const cy = 100 + 78 * Math.sin(rad);
+            const w = seat.filled ? 32 : 12; // half-width for offset
+            return seatEl(seat, i, { left: cx - w, top: cy - 12 });
           })}
         </div>
       ) : (
@@ -325,14 +325,14 @@ export function TableCard({
                       setHoverSeatIndex(null);
                     }}
                     onDragEnd={() => { setDraggingSeatIndex(null); setHoverSeatIndex(null); }}
-                    className={`w-7 h-7 rounded border flex items-center justify-center text-[9px] font-body font-medium transition-all ${
+                    className={`h-6 border flex items-center justify-center text-[9px] font-body font-medium transition-all overflow-hidden px-1 ${
                       seat.filled
-                        ? 'bg-primary/30 border-primary/50 text-primary cursor-grab active:cursor-grabbing'
-                        : 'bg-secondary border-border text-muted-foreground'
+                        ? 'w-full rounded-md bg-primary/30 border-primary/50 text-primary cursor-grab active:cursor-grabbing'
+                        : 'w-6 rounded-full bg-secondary border-border text-muted-foreground'
                     } ${isDragSource ? 'opacity-40 scale-90' : ''} ${isDropTarget ? 'ring-2 ring-primary scale-110' : ''}`}
                     title={seat.notes ? `${seat.label} — ${seat.notes}` : seat.label}
                   >
-                    {seat.filled ? seat.initials : ''}
+                    <span className="truncate leading-none">{seat.filled ? seat.display : ''}</span>
                   </div>
                 );
               })}
