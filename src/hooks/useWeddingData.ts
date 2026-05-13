@@ -80,11 +80,11 @@ export function useWeddingData() {
 
   const removeGuest = useCallback((id: string) => {
     setGuests(prev => prev.filter(g => g.id !== id));
-    // Also clean up seatOrder on any table
+    // Replace with nulls so seat positions stay stable
     setTables(prev =>
       prev.map(t => ({
         ...t,
-        seatOrder: t.seatOrder.filter(s => s !== id && s !== `${id}:plus`),
+        seatOrder: t.seatOrder.map(s => (s === id || s === `${id}:plus` ? null : s)),
       }))
     );
   }, []);
