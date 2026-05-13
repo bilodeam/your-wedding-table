@@ -283,14 +283,15 @@ export function TableCard({
 
       {/* Seat visualization */}
       {isRound ? (
-        <div className="relative w-[140px] h-[140px] mx-auto mb-3">
-          <div className="absolute inset-[25px] rounded-full border-2 border-border bg-secondary/30" />
+        <div className="relative w-[200px] h-[200px] mx-auto mb-3">
+          <div className="absolute inset-[35px] rounded-full border-2 border-border bg-secondary/30" />
           {seatData.map((seat, i) => {
             const angle = (i / table.capacity) * 360 - 90;
             const rad = (angle * Math.PI) / 180;
-            const cx = 70 + 55 * Math.cos(rad);
-            const cy = 70 + 55 * Math.sin(rad);
-            return seatEl(seat, i, { left: cx - 14, top: cy - 14 });
+            const cx = 100 + 78 * Math.cos(rad);
+            const cy = 100 + 78 * Math.sin(rad);
+            const w = seat.filled ? 32 : 12; // half-width for offset
+            return seatEl(seat, i, { left: cx - w, top: cy - 12 });
           })}
         </div>
       ) : (
