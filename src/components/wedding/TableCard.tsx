@@ -179,10 +179,8 @@ export function TableCard({
         onDrop={e => {
           e.preventDefault();
           e.stopPropagation();
-          if (draggingSeatIndex !== null && seat.filled && seat.orderIndex >= 0) {
-            const fromOrder = seatData[draggingSeatIndex]?.orderIndex;
-            if (fromOrder !== undefined && fromOrder >= 0)
-              onSwapSeats(table.id, fromOrder, seat.orderIndex);
+          if (draggingSeatIndex !== null && draggingSeatIndex !== i) {
+            onSwapSeats(table.id, draggingSeatIndex, i);
           }
           setDraggingSeatIndex(null);
           setHoverSeatIndex(null);
