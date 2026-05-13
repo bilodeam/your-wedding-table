@@ -124,7 +124,7 @@ export function TableCard({
   const guestMap = new Map(guests.map(g => [g.id, g]));
   const seatData: {
     key: string;
-    initials: string;
+    display: string;
     filled: boolean;
     label: string;
     notes?: string;
@@ -140,7 +140,7 @@ export function TableCard({
       if (guest && name) {
         seatData.push({
           key: `${entry}-${i}`,
-          initials: getInitials(name),
+          display: getShortName(name),
           filled: true,
           label: name,
           notes: !isPlus ? guest.notes : undefined,
@@ -150,7 +150,7 @@ export function TableCard({
     }
     seatData.push({
       key: `empty-${i}`,
-      initials: '',
+      display: '',
       filled: false,
       label: 'Empty seat',
     });
