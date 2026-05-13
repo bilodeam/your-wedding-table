@@ -325,14 +325,14 @@ export function TableCard({
                       setHoverSeatIndex(null);
                     }}
                     onDragEnd={() => { setDraggingSeatIndex(null); setHoverSeatIndex(null); }}
-                    className={`w-7 h-7 rounded border flex items-center justify-center text-[9px] font-body font-medium transition-all ${
+                    className={`h-6 border flex items-center justify-center text-[9px] font-body font-medium transition-all overflow-hidden px-1 ${
                       seat.filled
-                        ? 'bg-primary/30 border-primary/50 text-primary cursor-grab active:cursor-grabbing'
-                        : 'bg-secondary border-border text-muted-foreground'
+                        ? 'w-full rounded-md bg-primary/30 border-primary/50 text-primary cursor-grab active:cursor-grabbing'
+                        : 'w-6 rounded-full bg-secondary border-border text-muted-foreground'
                     } ${isDragSource ? 'opacity-40 scale-90' : ''} ${isDropTarget ? 'ring-2 ring-primary scale-110' : ''}`}
                     title={seat.notes ? `${seat.label} — ${seat.notes}` : seat.label}
                   >
-                    {seat.filled ? seat.display : ''}
+                    <span className="truncate leading-none">{seat.filled ? seat.display : ''}</span>
                   </div>
                 );
               })}
