@@ -161,7 +161,7 @@ export function useWeddingData() {
           capacity,
           shape,
           position: { x: col * 280 + 20, y: row * 280 + 20 },
-          seatOrder: [],
+          seatOrder: Array(capacity).fill(null),
         },
       ];
     });
