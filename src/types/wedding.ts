@@ -14,7 +14,7 @@ export interface Table {
   capacity: number;
   shape: 'round' | 'rectangular';
   position: { x: number; y: number };
-  seatOrder: string[]; // guestId or guestId:plus
+  seatOrder: (string | null)[]; // guestId or guestId:plus, null = empty seat. Always length=capacity.
 }
 
 export const DEFAULT_MEAL_OPTIONS = ['Vegetarian', 'Vegan', 'Gluten Free'];

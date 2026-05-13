@@ -121,41 +121,39 @@ export function TableCard({
     if (guestId) onDropGuest(guestId, table.id);
   };
 
-  // Build seat data from seatOrder
+  // Build seat data — one entry per seat slot, indexed by seatOrder position
   const guestMap = new Map(guests.map(g => [g.id, g]));
   const seatData: {
     key: string;
     initials: string;
     filled: boolean;
     label: string;
-    orderIndex: number;
     notes?: string;
   }[] = [];
 
-  table.seatOrder.forEach((entry, i) => {
-    const isPlus = entry.endsWith(':plus');
-    const guestId = isPlus ? entry.replace(':plus', '') : entry;
-    const guest = guestMap.get(guestId);
-    if (!guest) return;
-    const name = isPlus ? guest.plusOne : guest.name;
-    if (!name) return;
+  for (let i = 0; i < table.capacity; i++) {
+    const entry = table.seatOrder[i] ?? null;
+    if (entry) {
+      const isPlus = entry.endsWith(':plus');
+      const guestId = isPlus ? entry.replace(':plus', '') : entry;
+      const guest = guestMap.get(guestId);
+      const name = guest ? (isPlus ? guest.plusOne : guest.name) : '';
+      if (guest && name) {
+        seatData.push({
+          key: `${entry}-${i}`,
+          initials: getInitials(name),
+          filled: true,
+          label: name,
+          notes: !isPlus ? guest.notes : undefined,
+        });
+        continue;
+      }
+    }
     seatData.push({
-      key: entry,
-      initials: getInitials(name),
-      filled: true,
-      label: name,
-      orderIndex: i,
-      notes: !isPlus ? guest.notes : undefined,
-    });
-  });
-
-  while (seatData.length < table.capacity) {
-    seatData.push({
-      key: `empty-${seatData.length}`,
+      key: `empty-${i}`,
       initials: '',
       filled: false,
       label: 'Empty seat',
-      orderIndex: -1,
     });
   }
 
@@ -181,10 +179,8 @@ export function TableCard({
         onDrop={e => {
           e.preventDefault();
           e.stopPropagation();
-          if (draggingSeatIndex !== null && seat.filled && seat.orderIndex >= 0) {
-            const fromOrder = seatData[draggingSeatIndex]?.orderIndex;
-            if (fromOrder !== undefined && fromOrder >= 0)
-              onSwapSeats(table.id, fromOrder, seat.orderIndex);
+          if (draggingSeatIndex !== null && draggingSeatIndex !== i) {
+            onSwapSeats(table.id, draggingSeatIndex, i);
           }
           setDraggingSeatIndex(null);
           setHoverSeatIndex(null);
@@ -301,7 +297,7 @@ export function TableCard({
       ) : (
         <div className="mb-3">
           <div className="border-2 border-border bg-secondary/30 rounded-md px-2 py-3 min-h-[60px]">
-            <div className="flex flex-wrap gap-1.5 justify-center relative">
+            <div className="grid grid-cols-2 gap-1.5 justify-items-center">
               {seatData.map((seat, i) => {
                 const isDragSource = draggingSeatIndex === i;
                 const isDropTarget =
@@ -322,10 +318,8 @@ export function TableCard({
                     onDrop={e => {
                       e.preventDefault();
                       e.stopPropagation();
-                      if (draggingSeatIndex !== null && seat.filled && seat.orderIndex >= 0) {
-                        const fromOrder = seatData[draggingSeatIndex]?.orderIndex;
-                        if (fromOrder !== undefined && fromOrder >= 0)
-                          onSwapSeats(table.id, fromOrder, seat.orderIndex);
+                      if (draggingSeatIndex !== null && draggingSeatIndex !== i) {
+                        onSwapSeats(table.id, draggingSeatIndex, i);
                       }
                       setDraggingSeatIndex(null);
                       setHoverSeatIndex(null);

@@ -33,6 +33,14 @@ const loadData = (): WeddingData => {
       if (!parsed.mealOptions) {
         parsed.mealOptions = DEFAULT_MEAL_OPTIONS;
       }
+      // Migration: pad seatOrder with nulls to match capacity
+      if (parsed.tables) {
+        parsed.tables = parsed.tables.map((t: any) => {
+          const order: (string | null)[] = Array.isArray(t.seatOrder) ? [...t.seatOrder] : [];
+          while (order.length < t.capacity) order.push(null);
+          return { ...t, seatOrder: order.slice(0, t.capacity) };
+        });
+      }
       return parsed;
     }
   } catch {}
@@ -72,11 +80,11 @@ export function useWeddingData() {
 
   const removeGuest = useCallback((id: string) => {
     setGuests(prev => prev.filter(g => g.id !== id));
-    // Also clean up seatOrder on any table
+    // Replace with nulls so seat positions stay stable
     setTables(prev =>
       prev.map(t => ({
         ...t,
-        seatOrder: t.seatOrder.filter(s => s !== id && s !== `${id}:plus`),
+        seatOrder: t.seatOrder.map(s => (s === id || s === `${id}:plus` ? null : s)),
       }))
     );
   }, []);
@@ -108,10 +116,22 @@ export function useWeddingData() {
 
           return prevTables.map(t => {
             if (t.id !== tableId) return t;
-            const newOrder = t.seatOrder.filter(s => s !== guestId && s !== `${guestId}:plus`);
-            newOrder.push(guestId);
-            if (guest.plusOne) newOrder.push(`${guestId}:plus`);
-            return { ...t, seatOrder: newOrder };
+            // Pad/trim to capacity
+            const order: (string | null)[] = [...t.seatOrder];
+            while (order.length < t.capacity) order.push(null);
+            // Remove this guest's existing seats (replace with null)
+            for (let i = 0; i < order.length; i++) {
+              if (order[i] === guestId || order[i] === `${guestId}:plus`) order[i] = null;
+            }
+            // Find first null and place guest; if plusOne, place adjacent null too
+            const firstNull = order.indexOf(null);
+            if (firstNull === -1) return t;
+            order[firstNull] = guestId;
+            if (guest.plusOne) {
+              const nextNull = order.indexOf(null);
+              if (nextNull !== -1) order[nextNull] = `${guestId}:plus`;
+            }
+            return { ...t, seatOrder: order.slice(0, t.capacity) };
           });
         });
 
@@ -121,7 +141,7 @@ export function useWeddingData() {
         setTables(prevTables =>
           prevTables.map(t => ({
             ...t,
-            seatOrder: t.seatOrder.filter(s => s !== guestId && s !== `${guestId}:plus`),
+            seatOrder: t.seatOrder.map(s => (s === guestId || s === `${guestId}:plus` ? null : s)),
           }))
         );
         return prevGuests.map(g => (g.id === guestId ? { ...g, tableId: null } : g));
@@ -141,7 +161,7 @@ export function useWeddingData() {
           capacity,
           shape,
           position: { x: col * 280 + 20, y: row * 280 + 20 },
-          seatOrder: [],
+          seatOrder: Array(capacity).fill(null),
         },
       ];
     });
@@ -198,7 +218,18 @@ export function useWeddingData() {
   }, []);
 
   const updateTable = useCallback((id: string, updates: Partial<Table>) => {
-    setTables(prev => prev.map(t => (t.id === id ? { ...t, ...updates } : t)));
+    setTables(prev =>
+      prev.map(t => {
+        if (t.id !== id) return t;
+        const next = { ...t, ...updates };
+        if (updates.capacity !== undefined) {
+          const order = [...next.seatOrder];
+          while (order.length < updates.capacity) order.push(null);
+          next.seatOrder = order.slice(0, updates.capacity);
+        }
+        return next;
+      })
+    );
   }, []);
 
   const removeTable = useCallback((id: string) => {
