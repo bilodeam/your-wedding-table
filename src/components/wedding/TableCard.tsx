@@ -297,7 +297,7 @@ export function TableCard({
       ) : (
         <div className="mb-3">
           <div className="border-2 border-border bg-secondary/30 rounded-md px-2 py-3 min-h-[60px]">
-            <div className="flex flex-wrap gap-1.5 justify-center relative">
+            <div className="grid grid-cols-2 gap-1.5 justify-items-center">
               {seatData.map((seat, i) => {
                 const isDragSource = draggingSeatIndex === i;
                 const isDropTarget =
@@ -318,10 +318,8 @@ export function TableCard({
                     onDrop={e => {
                       e.preventDefault();
                       e.stopPropagation();
-                      if (draggingSeatIndex !== null && seat.filled && seat.orderIndex >= 0) {
-                        const fromOrder = seatData[draggingSeatIndex]?.orderIndex;
-                        if (fromOrder !== undefined && fromOrder >= 0)
-                          onSwapSeats(table.id, fromOrder, seat.orderIndex);
+                      if (draggingSeatIndex !== null && draggingSeatIndex !== i) {
+                        onSwapSeats(table.id, draggingSeatIndex, i);
                       }
                       setDraggingSeatIndex(null);
                       setHoverSeatIndex(null);
