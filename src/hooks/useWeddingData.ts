@@ -116,10 +116,22 @@ export function useWeddingData() {
 
           return prevTables.map(t => {
             if (t.id !== tableId) return t;
-            const newOrder = t.seatOrder.filter(s => s !== guestId && s !== `${guestId}:plus`);
-            newOrder.push(guestId);
-            if (guest.plusOne) newOrder.push(`${guestId}:plus`);
-            return { ...t, seatOrder: newOrder };
+            // Pad/trim to capacity
+            const order: (string | null)[] = [...t.seatOrder];
+            while (order.length < t.capacity) order.push(null);
+            // Remove this guest's existing seats (replace with null)
+            for (let i = 0; i < order.length; i++) {
+              if (order[i] === guestId || order[i] === `${guestId}:plus`) order[i] = null;
+            }
+            // Find first null and place guest; if plusOne, place adjacent null too
+            const firstNull = order.indexOf(null);
+            if (firstNull === -1) return t;
+            order[firstNull] = guestId;
+            if (guest.plusOne) {
+              const nextNull = order.indexOf(null);
+              if (nextNull !== -1) order[nextNull] = `${guestId}:plus`;
+            }
+            return { ...t, seatOrder: order.slice(0, t.capacity) };
           });
         });
 
