@@ -33,6 +33,14 @@ const loadData = (): WeddingData => {
       if (!parsed.mealOptions) {
         parsed.mealOptions = DEFAULT_MEAL_OPTIONS;
       }
+      // Migration: pad seatOrder with nulls to match capacity
+      if (parsed.tables) {
+        parsed.tables = parsed.tables.map((t: any) => {
+          const order: (string | null)[] = Array.isArray(t.seatOrder) ? [...t.seatOrder] : [];
+          while (order.length < t.capacity) order.push(null);
+          return { ...t, seatOrder: order.slice(0, t.capacity) };
+        });
+      }
       return parsed;
     }
   } catch {}
