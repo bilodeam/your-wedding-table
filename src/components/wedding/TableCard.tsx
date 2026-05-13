@@ -121,41 +121,39 @@ export function TableCard({
     if (guestId) onDropGuest(guestId, table.id);
   };
 
-  // Build seat data from seatOrder
+  // Build seat data — one entry per seat slot, indexed by seatOrder position
   const guestMap = new Map(guests.map(g => [g.id, g]));
   const seatData: {
     key: string;
     initials: string;
     filled: boolean;
     label: string;
-    orderIndex: number;
     notes?: string;
   }[] = [];
 
-  table.seatOrder.forEach((entry, i) => {
-    const isPlus = entry.endsWith(':plus');
-    const guestId = isPlus ? entry.replace(':plus', '') : entry;
-    const guest = guestMap.get(guestId);
-    if (!guest) return;
-    const name = isPlus ? guest.plusOne : guest.name;
-    if (!name) return;
+  for (let i = 0; i < table.capacity; i++) {
+    const entry = table.seatOrder[i] ?? null;
+    if (entry) {
+      const isPlus = entry.endsWith(':plus');
+      const guestId = isPlus ? entry.replace(':plus', '') : entry;
+      const guest = guestMap.get(guestId);
+      const name = guest ? (isPlus ? guest.plusOne : guest.name) : '';
+      if (guest && name) {
+        seatData.push({
+          key: `${entry}-${i}`,
+          initials: getInitials(name),
+          filled: true,
+          label: name,
+          notes: !isPlus ? guest.notes : undefined,
+        });
+        continue;
+      }
+    }
     seatData.push({
-      key: entry,
-      initials: getInitials(name),
-      filled: true,
-      label: name,
-      orderIndex: i,
-      notes: !isPlus ? guest.notes : undefined,
-    });
-  });
-
-  while (seatData.length < table.capacity) {
-    seatData.push({
-      key: `empty-${seatData.length}`,
+      key: `empty-${i}`,
       initials: '',
       filled: false,
       label: 'Empty seat',
-      orderIndex: -1,
     });
   }
 
